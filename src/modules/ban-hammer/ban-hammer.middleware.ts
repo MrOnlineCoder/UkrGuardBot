@@ -41,12 +41,13 @@ async function banHammerGeneralMiddleware(ctx: Context, next: Function) {
 
 async function issueInOtherChats(ctx: Context, ban: IBan) {
   const messages = await messagesLoggerRepository.findLastMessagesOfUser(
-    ban.telegramUserId
+    ban.telegramUserId,
+    24 * 60 * 60 * 1000 // 24 hours
   );
 
   logger.log(
     `BanHammer`,
-    `Found ${messages.length} total messgaes for banning user ${ban.telegramUserId}`
+    `Found ${messages.length} total messages for banning user ${ban.telegramUserId}`
   );
 
   for (const msg of messages) {
@@ -92,7 +93,7 @@ async function rusBanMiddleware(ctx: Context, next: Function) {
   await BanHammerRepository.insertBan(ban);
 
   const ack = await ctx.reply(
-    `🇷🇺🖕 Русню під іменем ${targetBanUser.first_name} (ID ${targetBanUser.id}) забанено. Вартовий бот тепер не допустить його в жоден інший чат.`
+    `🇷🇺🖕 Русню під іменем ${targetBanUser.first_name} (ID ${targetBanUser.id}) забанено. Вартовий бот тепер не допустить його в жоден інший чат під охороною.`
   );
 
   await issueInOtherChats(ctx, ban);
@@ -123,7 +124,7 @@ async function spamBanMiddleware(ctx: Context, next: Function) {
   await BanHammerRepository.insertBan(ban);
 
   const ack = await ctx.reply(
-    `🗣❌ Спамера під іменем ${targetBanUser.first_name} (ID ${targetBanUser.id}) забанено. Вартовий бот тепер не допустить його в жоден інший чат.`
+    `🗣❌ Спамера під іменем ${targetBanUser.first_name} (ID ${targetBanUser.id}) забанено. Вартовий бот тепер не допустить його в жоден інший чат під охороною.`
   );
 
   await issueInOtherChats(ctx, ban);
