@@ -4,8 +4,14 @@ import { isChatAdmin } from "../../telegram/utils";
 
 import BanHammerRepository from "./ban-hammer.repository";
 
-import { BanReason, IBan, IBanHammerMiddlewareState } from "./ban-hammer.interfaces";
+import {
+  BanReason,
+  IBan,
+  IBanHammerMiddlewareState,
+} from "./ban-hammer.interfaces";
 import { Message } from "telegraf/typings/telegram-types";
+import logger from "../../common/logger";
+import messagesLoggerRepository from "../messages-logger/messages-logger.repository";
 
 async function banHammerGeneralMiddleware(ctx: Context, next: Function) {
   if (ctx.chat?.type == "private") return null;
@@ -33,8 +39,42 @@ async function banHammerGeneralMiddleware(ctx: Context, next: Function) {
   next();
 }
 
+async function issueInOtherChats(ctx: Context, ban: IBan) {
+  const messages = await messagesLoggerRepository.findLastMessagesOfUser(
+    ban.telegramUserId
+  );
+
+  logger.log(
+    `BanHammer`,
+    `Found ${messages.length} total messgaes for banning user ${ban.telegramUserId}`
+  );
+
+  for (const msg of messages) {
+    try {
+      await ctx.telegram.deleteMessage(
+        msg.telegramChatId,
+        msg.telegramMessageId
+      );
+
+      logger.log(
+        `BanHammer`,
+        `Deleted message ${msg.telegramMessageId} in chat ${msg.telegramChatId} (${msg.telegramChatTitle}) of banned user ${msg.senderName} (${msg.telegramSenderId})`
+      );
+    } catch (err) {
+      logger.error(
+        `BanHammer`,
+        `Error happened while cleaning up message ${msg.telegramMessageId} for chat ${msg.telegramChatId} for user ${msg.telegramSenderId}`,
+        err
+      );
+    }
+
+    await banChatMember(ctx, msg.telegramChatId, msg.telegramSenderId, true);
+  }
+}
+
 async function rusBanMiddleware(ctx: Context, next: Function) {
-  const { targetBanUser, targetBanMessage } = ctx.state as IBanHammerMiddlewareState;
+  const { targetBanUser, targetBanMessage } =
+    ctx.state as IBanHammerMiddlewareState;
 
   await banChatMember(ctx, ctx.chat?.id!, targetBanUser.id!, true);
   await ctx.deleteMessage();
@@ -55,6 +95,8 @@ async function rusBanMiddleware(ctx: Context, next: Function) {
     `🇷🇺🖕 Русню під іменем ${targetBanUser.first_name} (ID ${targetBanUser.id}) забанено. Вартовий бот тепер не допустить його в жоден інший чат.`
   );
 
+  await issueInOtherChats(ctx, ban);
+
   setTimeout(async () => {
     await ctx.telegram.deleteMessage(ack.chat.id, ack.message_id);
   }, 7500);
@@ -66,8 +108,6 @@ async function spamBanMiddleware(ctx: Context, next: Function) {
 
   await banChatMember(ctx, ctx.chat?.id!, targetBanUser.id!, true);
   await ctx.deleteMessage();
-
-  console.log();
 
   const ban: IBan = {
     isGlobal: true,
@@ -86,13 +126,68 @@ async function spamBanMiddleware(ctx: Context, next: Function) {
     `🗣❌ Спамера під іменем ${targetBanUser.first_name} (ID ${targetBanUser.id}) забанено. Вартовий бот тепер не допустить його в жоден інший чат.`
   );
 
+  await issueInOtherChats(ctx, ban);
+
   setTimeout(async () => {
     await ctx.telegram.deleteMessage(ack.chat.id, ack.message_id);
   }, 7500);
 }
 
+async function banHammerWatcher(ctx: Context, next: Function) {
+  if (ctx.chat?.type == "private") return next();
+
+  if (!ctx.from) return next();
+
+  //Typical ban
+  const bans = await BanHammerRepository.findBansByUserId(ctx.from?.id!, true);
+
+  if (bans.length) {
+    const ban = bans[0];
+    logger.log(
+      `BanHammerWatcher`,
+      `User ${ctx.from.first_name} (${
+        ctx.from.id
+      }) tried to send a message in chat ${ctx.chat
+        ?.id!}, but he has an active ban ID ${ban.id}, reason = ${
+        ban.reason
+      } since ${ban.banDate.toISOString()}. Banning in chat...`
+    );
+    if (ctx.message) await ctx.deleteMessage();
+    await banChatMember(ctx, ctx.chat?.id!, ctx.from?.id!, true);
+  }
+
+  //Spam ban
+  if (ctx.message?.text) {
+    const spamBans = await BanHammerRepository.findSpamBansByContent(
+      ctx.message.text
+    );
+
+    if (spamBans.length) {
+      const ban = spamBans[0];
+      logger.log(
+        `BanHammerWatcher`,
+        `User ${ctx.from.first_name} (${
+          ctx.from.id
+        }) tried to send a SPAM message in chat ${ctx.chat
+          ?.id!}, matched by global ban ID ${ban.id} since ${ban.banDate.toISOString()}. Banning in chat...`
+      );
+      await ctx.deleteMessage();
+      await banChatMember(ctx, ctx.chat?.id!, ctx.from.id);
+
+      const ack = await ctx.reply(`🛡 Користувач ${ctx.from.first_name} (${ctx.from.id}) намагався відправити спам-повідомлення, і тому був забанений.`);
+
+      setTimeout(async () => {
+        await ctx.deleteMessage(ack.message_id);
+      }, 4500);
+    }
+  }
+
+  next();
+}
+
 export default {
   rusBanMiddleware,
   spamBanMiddleware,
-  banHammerGeneralMiddleware
-}
+  banHammerGeneralMiddleware,
+  banHammerWatcher,
+};

@@ -9,6 +9,8 @@ export function install(bot: MyBot) {
     BanHammerMiddleware.rusBanMiddleware
     );
     bot.hears('!спам', BanHammerMiddleware.banHammerGeneralMiddleware, BanHammerMiddleware.spamBanMiddleware)
+
+    bot.use(BanHammerMiddleware.banHammerWatcher);
 }
 
 export default {
