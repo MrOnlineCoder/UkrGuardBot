@@ -9,7 +9,7 @@ export default async (ctx: Context, next: () => Promise<void>) => {
   const username = ctx.from?.username || ctx.from?.first_name || "n/a";
   const id = ctx.from?.id;
   const fromFull =
-    ctx.chat?.type == "private" ? `PM (${id})` : `"${ctx.chat?.title}" (${id})`;
+    ctx.chat?.type == "private" ? `PM (${id})` : `"${ctx.chat?.title}" (${ctx.chat?.id})`;
   const loggedMessageText =
     ctx.message?.text || `** ${ctx.updateType}/${ctx.updateSubTypes.join()} **`;
 
