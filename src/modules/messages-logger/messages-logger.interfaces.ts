@@ -3,6 +3,7 @@ export interface IMessage {
     telegramMessageId: number;
     telegramChatId: number;
     telegramSenderId: number;
+    telegramChatTitle?: string | null;
     senderName: string;
     senderUsername?: string;
     contentType: string;

@@ -35,6 +35,7 @@ export default async (ctx: Context, next: () => Promise<void>) => {
       telegramMessageId: ctx.message?.message_id!,
       telegramSenderId: ctx.from?.id!,
       sentAt: new Date(ctx.message?.date! * 1000),
+      telegramChatTitle: ctx.chat?.type === 'private' ? null : ctx.chat?.title
     };
 
     await messagesLoggerRepository.insert(msg);
