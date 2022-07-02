@@ -7,7 +7,7 @@ function log(tag: string, message: string) {
 }
 
 function error(tag: string, message: string, error: any) {
-    console.error(`${makeTimestamp()} ERROR [${tag}] ${message}`);
+    console.error(`${makeTimestamp()} ERROR [${tag}] ${message}`, error);
 }
 
 export default {
