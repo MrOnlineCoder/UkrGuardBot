@@ -9,7 +9,7 @@ export default (ctx: Context, next: () => Promise<void>) => {
     const fromFull = ctx.chat?.type == 'private' ? `PM (${id})` : `"${ctx.chat?.title}" (${id})`;
     const message = ctx.message?.text || `** ${ctx.updateType}/${ctx.updateSubTypes.join()} **`;
 
-    Logger.log("TelegramChat", `<${username} @ ${fromFull}> ${message}`);
+    Logger.log('TelegramChat', `<${username} @ ${fromFull}> ${message}`);
 
     next();
 }

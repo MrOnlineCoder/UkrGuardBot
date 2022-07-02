@@ -7,6 +7,7 @@ import LanguageWatcherMiddleware from '../modules/language-watcher/language-watc
 
 import { session, Stage, BaseScene } from 'telegraf'
 import { MiddlewareFn } from "telegraf/typings/composer";
+import BanHammerMiddleware from "../modules/ban-hammer/ban-hammer.middleware";
 
 async function init() {
     const bot = new Telegraf(process.env.TELEGRAM_TOKEN!);
@@ -19,6 +20,7 @@ async function init() {
 
     bot.use(MessageLogMiddleware);
     bot.use(LanguageWatcherMiddleware);
+    bot.use(BanHammerMiddleware);
 
     await bot.launch();
 }
