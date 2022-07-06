@@ -24,7 +24,14 @@ async function init() {
     const whitelist = process.env.BOT_CHAT_WHITELIST?.split(",").map(Number);
 
     if (!whitelist?.includes(ctx.chat?.id!)) {
-        logger.log(`Whitelist`, `User (${ctx.from?.username || ctx.from?.first_name}) ${ctx.from?.id} tried to send message in non-whitelisted chat ${ctx.chat.id}: ${ctx.message?.text || ctx.updateSubTypes.join()}`);
+      logger.log(
+        `Whitelist`,
+        `User (${ctx.from?.username || ctx.from?.first_name}) ${
+          ctx.from?.id
+        } tried to send message in non-whitelisted chat ${ctx.chat.id}: ${
+          ctx.message?.text || ctx.updateSubTypes.join()
+        }`
+      );
     } else {
       next();
     }

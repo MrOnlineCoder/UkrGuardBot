@@ -100,7 +100,7 @@ async function rusBanMiddleware(ctx: Context, next: Function) {
 
   setTimeout(async () => {
     await ctx.telegram.deleteMessage(ack.chat.id, ack.message_id);
-  }, 7500);
+  }, 5500);
 }
 
 async function spamBanMiddleware(ctx: Context, next: Function) {
@@ -158,30 +158,30 @@ async function banHammerWatcher(ctx: Context, next: Function) {
   }
 
   //Spam ban
-  if (ctx.message?.text) {
-    const spamBans = await BanHammerRepository.findSpamBansByContent(
-      ctx.message.text
-    );
+  // if (ctx.message?.text) {
+  //   const spamBans = await BanHammerRepository.findSpamBansByContent(
+  //     ctx.message.text
+  //   );
 
-    if (spamBans.length) {
-      const ban = spamBans[0];
-      logger.log(
-        `BanHammerWatcher`,
-        `User ${ctx.from.first_name} (${
-          ctx.from.id
-        }) tried to send a SPAM message in chat ${ctx.chat
-          ?.id!}, matched by global ban ID ${ban.id} since ${ban.banDate.toISOString()}. Banning in chat...`
-      );
-      await ctx.deleteMessage();
-      await banChatMember(ctx, ctx.chat?.id!, ctx.from.id);
+  //   if (spamBans.length) {
+  //     const ban = spamBans[0];
+  //     logger.log(
+  //       `BanHammerWatcher`,
+  //       `User ${ctx.from.first_name} (${
+  //         ctx.from.id
+  //       }) tried to send a SPAM message in chat ${ctx.chat
+  //         ?.id!}, matched by global ban ID ${ban.id} since ${ban.banDate.toISOString()}. Banning in chat...`
+  //     );
+  //     await ctx.deleteMessage();
+  //     await banChatMember(ctx, ctx.chat?.id!, ctx.from.id);
 
-      const ack = await ctx.reply(`🛡 Користувач ${ctx.from.first_name} (${ctx.from.id}) намагався відправити спам-повідомлення, і тому був забанений.`);
+  //     const ack = await ctx.reply(`🛡 Користувач ${ctx.from.first_name} (${ctx.from.id}) намагався відправити спам-повідомлення, і тому був забанений.`);
 
-      setTimeout(async () => {
-        await ctx.deleteMessage(ack.message_id);
-      }, 4500);
-    }
-  }
+  //     setTimeout(async () => {
+  //       await ctx.deleteMessage(ack.message_id);
+  //     }, 4500);
+  //   }
+  // }
 
   next();
 }

@@ -13,15 +13,19 @@ export default async (ctx: Context, next: Function) => {
         `LanguageWatcherMiddleware`,
         `New user ID ${user.id} (${user.first_name}) in chat ${
           ctx.chat!.id
-        } has language code: ${user.language_code}`
+        } has language code: ${user.language_code || 'n/a'}`
       );
 
       if (user.language_code && user.language_code.toLowerCase() == "ru") {
-        ctx.reply(
+        const alertMsg = await ctx.reply(
           `❗️🇷🇺 У нового учасника чату ${user.first_name} (${
             user.username || user.id
           }) російська мова пристрою.`
         );
+
+          setTimeout(async () => {
+            await ctx.deleteMessage(alertMsg.message_id);
+          }, 10 * 1000);
       }
     }
   }

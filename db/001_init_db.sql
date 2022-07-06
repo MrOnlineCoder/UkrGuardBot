@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS "bans" (
     ban_date timestamptz NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS bans_telegram_user_id_idx ON bans (telegram_user_id);
-
 CREATE INDEX IF NOT EXISTS messages_telegram_sender_id_idx ON messages (telegram_sender_id);
+CREATE INDEX IF NOT EXISTS messages_telegram_sender_id_date_idx ON messages (telegram_sender_id, sent_at);
+
+CREATE INDEX IF NOT EXISTS bans_telegram_user_id_idx ON bans (telegram_user_id);
+CREATE INDEX IF NOT EXISTS bans_telegram_spam_text_idx ON bans USING GIST (gist_trgm_ops telegram_user_id);
