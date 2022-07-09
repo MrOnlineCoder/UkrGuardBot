@@ -9,6 +9,11 @@ import { extractSenderMetadata } from "./messages-logger.utils";
 import { Chat } from "telegraf/typings/telegram-types";
 
 export default async (ctx: Context, next: () => Promise<void>) => {
+  if (!ctx.message) {
+    logger.log(`TelegramChat`, `Update "${ctx.updateType}" in chat ${ctx.chat?.id}`);
+    return next();
+  }
+
   const id = ctx.from?.id;
   const destinationFullText =
     ctx.chat?.type == "private" ? `PM (${id})` : `"${ctx.chat?.title}" (${ctx.chat?.id})`;

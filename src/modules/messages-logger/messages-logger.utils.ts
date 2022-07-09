@@ -5,7 +5,9 @@ import {
   TelegramSenderType,
 } from "./messages-logger.interfaces";
 
-export function getTelegramSenderTypeFromMessage(message?: Message): TelegramSenderType {
+export function getTelegramSenderTypeFromMessage(
+  message?: Message
+): TelegramSenderType {
   if (message?.sender_chat) {
     if (message.sender_chat.type == "channel")
       return TelegramSenderType.CHANNEL;
@@ -16,16 +18,22 @@ export function getTelegramSenderTypeFromMessage(message?: Message): TelegramSen
   }
 }
 
-export function extractSenderMetadata(message?: Message, from?: User): IMessageSenderMetadata {
+export function extractSenderMetadata(
+  message?: Message,
+  from?: User
+): IMessageSenderMetadata {
   const meta: IMessageSenderMetadata = {
     telegramSenderType: getTelegramSenderTypeFromMessage(message),
   };
 
   //We should take data from ctx.from only if sender is really a user
   if (meta.telegramSenderType == TelegramSenderType.USER) {
-    meta.senderName =
-      from?.first_name! +
-      (from?.last_name ? " " + from?.last_name : "");
+    const nameTokens = [
+      from?.first_name && from?.first_name.trim(),
+      from?.last_name && from?.last_name.trim(),
+    ].filter(Boolean);
+
+    meta.senderName = nameTokens.join(" ");
 
     meta.senderUsername = from?.username || null;
     meta.telegramSenderId = from?.id;

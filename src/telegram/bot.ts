@@ -9,6 +9,7 @@ import { session, Stage, BaseScene } from "telegraf";
 import { MiddlewareFn } from "telegraf/typings/composer";
 import logger from "../common/logger";
 import AntiRaidModule from "../modules/anti-raid/anti-raid.module";
+import AuditlogModule from "../modules/audit-log/audit-log.module"
 
 async function init() {
   const bot = new Telegraf(process.env.TELEGRAM_TOKEN!);
@@ -42,6 +43,7 @@ async function init() {
   LanguageWatcherModule.install(bot);
   BanHammerModule.install(bot);
   AntiRaidModule.install(bot);
+  AuditlogModule.install(bot);
 
   await bot.launch();
 }
