@@ -13,9 +13,16 @@ def ping():
     return "pong"
 
 
-@app.route('/predict')
+@app.route('/predict', methods=['POST'])
 def predict():
-    query = request.args["query"]
+    query = request.json["query"]
+    
+    if not query or query == None:
+        return {
+            "query": None,
+            "result": None
+        }
+
     result = am.predict(query)
 
     return {

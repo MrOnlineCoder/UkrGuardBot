@@ -12,6 +12,8 @@ import {
 import { Message } from "telegraf/typings/telegram-types";
 import logger from "../../common/logger";
 import messagesLoggerRepository from "../messages-logger/messages-logger.repository";
+import { extractSenderMetadata } from "../messages-logger/messages-logger.utils";
+import { TelegramSenderType } from "../messages-logger/messages-logger.interfaces";
 
 async function banHammerGeneralMiddleware(ctx: Context, next: Function) {
   if (ctx.chat?.type == "private") return null;
@@ -33,8 +35,12 @@ async function banHammerGeneralMiddleware(ctx: Context, next: Function) {
 
   const stateObject = ctx.state as IBanHammerMiddlewareState;
 
-  stateObject.targetBanUser = targetUser;
-  stateObject.targetBanMessage = targetMessage;
+  stateObject.targetSenderMetadata = extractSenderMetadata(
+    targetMessage as Message,
+    targetUser
+  );
+
+  stateObject.targetMessage = targetMessage as Message;
 
   next();
 }
@@ -50,6 +56,8 @@ async function issueInOtherChats(ctx: Context, ban: IBan) {
     `Found ${messages.length} total messages for banning user ${ban.telegramUserId}`
   );
 
+  const bannedChatIds = new Set();
+
   for (const msg of messages) {
     try {
       await ctx.telegram.deleteMessage(
@@ -61,6 +69,18 @@ async function issueInOtherChats(ctx: Context, ban: IBan) {
         `BanHammer`,
         `Deleted message ${msg.telegramMessageId} in chat ${msg.telegramChatId} (${msg.telegramChatTitle}) of banned user ${msg.senderName} (${msg.telegramSenderId})`
       );
+
+      if (!bannedChatIds.has(msg.telegramChatId)) {
+        if (msg.telegramSenderType === TelegramSenderType.USER)
+          await banChatMember(
+            ctx,
+            msg.telegramChatId,
+            msg.telegramSenderId!,
+            true
+          );
+
+        bannedChatIds.add(msg.telegramChatId);
+      }
     } catch (err) {
       logger.error(
         `BanHammer`,
@@ -68,24 +88,30 @@ async function issueInOtherChats(ctx: Context, ban: IBan) {
         err
       );
     }
-
-    await banChatMember(ctx, msg.telegramChatId, msg.telegramSenderId, true);
   }
 }
 
 async function rusBanMiddleware(ctx: Context, next: Function) {
-  const { targetBanUser, targetBanMessage } =
+  const { targetSenderMetadata, targetMessage, dbMessage } =
     ctx.state as IBanHammerMiddlewareState;
 
-  await banChatMember(ctx, ctx.chat?.id!, targetBanUser.id!, true);
+  if (targetSenderMetadata.telegramSenderType === TelegramSenderType.USER)
+    await banChatMember(
+      ctx,
+      ctx.chat?.id!,
+      targetSenderMetadata.telegramSenderId!,
+      true
+    );
   await ctx.deleteMessage();
 
   const ban: IBan = {
     isGlobal: true,
     telegramChatId: ctx.chat?.id!,
     telegramAdminId: ctx.from?.id!,
-    telegramMessageId: targetBanMessage.message_id,
-    telegramUserId: targetBanUser.id,
+    telegramMessageId: targetMessage.message_id,
+    telegramUserId: targetSenderMetadata.telegramSenderId!,
+    telegramSenderType: dbMessage.telegramSenderType,
+    originMessageContent: ctx.message?.text || null,
     banDate: new Date(),
     reason: BanReason.RUSSIAN_ORC,
   };
@@ -93,7 +119,7 @@ async function rusBanMiddleware(ctx: Context, next: Function) {
   await BanHammerRepository.insertBan(ban);
 
   const ack = await ctx.reply(
-    `🇷🇺🖕 Русню під іменем ${targetBanUser.first_name} (ID ${targetBanUser.id}) забанено. Вартовий бот тепер не допустить його в жоден інший чат під охороною.`
+    `🇷🇺🖕 Русню під іменем ${targetSenderMetadata.senderName} (ID ${targetSenderMetadata.telegramSenderId}) забанено. Вартовий бот тепер не допустить його в жоден інший чат під охороною.`
   );
 
   await issueInOtherChats(ctx, ban);
@@ -104,19 +130,25 @@ async function rusBanMiddleware(ctx: Context, next: Function) {
 }
 
 async function spamBanMiddleware(ctx: Context, next: Function) {
-  const { targetBanUser, targetBanMessage } =
+  const { targetMessage, targetSenderMetadata } =
     ctx.state as IBanHammerMiddlewareState;
 
-  await banChatMember(ctx, ctx.chat?.id!, targetBanUser.id!, true);
+  await banChatMember(
+    ctx,
+    ctx.chat?.id!,
+    targetSenderMetadata.telegramSenderId!,
+    true
+  );
   await ctx.deleteMessage();
 
   const ban: IBan = {
     isGlobal: true,
     telegramChatId: ctx.chat?.id!,
     telegramAdminId: ctx.from?.id!,
-    telegramMessageId: targetBanMessage.message_id,
-    originMessageContent: (targetBanMessage as Message).text || null,
-    telegramUserId: targetBanUser.id,
+    originMessageContent: targetMessage.text || null,
+    telegramMessageId: targetMessage.message_id,
+    telegramUserId: targetSenderMetadata.telegramSenderId!,
+    telegramSenderType: targetSenderMetadata.telegramSenderType,
     banDate: new Date(),
     reason: BanReason.SPAM,
   };
@@ -124,7 +156,7 @@ async function spamBanMiddleware(ctx: Context, next: Function) {
   await BanHammerRepository.insertBan(ban);
 
   const ack = await ctx.reply(
-    `🗣❌ Спамера під іменем ${targetBanUser.first_name} (ID ${targetBanUser.id}) забанено. Вартовий бот тепер не допустить його в жоден інший чат під охороною.`
+    `🗣❌ Спамера під іменем ${targetSenderMetadata.senderName} (ID ${targetSenderMetadata.telegramSenderId}) забанено. Вартовий бот тепер не допустить його в жоден інший чат під охороною.`
   );
 
   await issueInOtherChats(ctx, ban);
@@ -154,7 +186,7 @@ async function banHammerWatcher(ctx: Context, next: Function) {
       } since ${ban.banDate.toISOString()}. Banning in chat...`
     );
     if (ctx.message) await ctx.deleteMessage();
-    await banChatMember(ctx, ctx.chat?.id!, ctx.from?.id!, true);
+    await banChatMember(ctx, ctx.chat?.id!, ban.telegramUserId, true);
   }
 
   //Spam ban

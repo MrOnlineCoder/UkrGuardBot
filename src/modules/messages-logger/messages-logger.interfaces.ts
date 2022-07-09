@@ -1,13 +1,31 @@
 export interface IMessage {
-    id?: number;
-    telegramMessageId: number;
-    telegramChatId: number;
-    telegramSenderId: number;
-    telegramChatTitle?: string | null;
-    senderName: string;
-    senderUsername?: string;
-    contentType: string;
-    content: string;
-    sentAt: Date;
-    moderationVerdict?: string;
+  id?: number;
+  telegramMessageId: number;
+  telegramChatId: number;
+  telegramSenderId?: number;
+  telegramChatTitle?: string | null;
+  telegramSenderType: TelegramSenderType;
+  senderName?: string | null;
+  senderUsername?: string | null;
+  contentType: string;
+  content: string;
+  sentAt: Date;
+  moderationVerdict?: string;
+}
+
+export enum TelegramSenderType {
+  USER = "USER",
+  CHANNEL = "CHANNEL",
+  GROUP = "GROUP",
+}
+
+export interface IBaseContextState {
+  dbMessage: IMessage;
+}
+
+export interface IMessageSenderMetadata {
+  telegramSenderId?: number;
+  telegramSenderType: TelegramSenderType;
+  senderName?: string | null;
+  senderUsername?: string | null;
 }

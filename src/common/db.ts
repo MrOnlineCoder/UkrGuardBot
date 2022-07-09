@@ -1,5 +1,5 @@
 import pg from "pg";
-import logger from "../../common/logger";
+import logger from "./logger";
 
 let client: pg.Client;
 

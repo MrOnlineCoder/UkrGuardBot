@@ -1,4 +1,5 @@
-import { ReplyMessage, User } from 'telegraf/typings/telegram-types';
+import { Message, ReplyMessage, User } from 'telegraf/typings/telegram-types';
+import { IBaseContextState, IMessageSenderMetadata, TelegramSenderType } from '../messages-logger/messages-logger.interfaces';
 
 export interface IBan {
     id?: number;
@@ -6,6 +7,7 @@ export interface IBan {
     telegramChatId: number;
     telegramAdminId: number;
     telegramMessageId: number;
+    telegramSenderType: TelegramSenderType;
     originMessageContent?: string | null;
     reason: BanReason;
     isGlobal: boolean;
@@ -18,7 +20,7 @@ export enum BanReason {
     SPAM = 'SPAM'
 }
 
-export interface IBanHammerMiddlewareState {
-    targetBanMessage: ReplyMessage; 
-    targetBanUser: User;
+export interface IBanHammerMiddlewareState extends IBaseContextState {
+    targetSenderMetadata: IMessageSenderMetadata;
+    targetMessage: Message;
 }
