@@ -10,6 +10,7 @@ import { AuditLogEventType } from "../audit-log/audit-log.types";
 
 import moment from 'moment'
 import { deleteMessageInTelegramAndDb } from "../messages-logger/messages-logger.utils";
+import banHammerService from "../ban-hammer/ban-hammer.service";
 
 async function antiRaidCommandMiddleware(
   ctx: Context,
@@ -107,16 +108,28 @@ async function antiRaidJudgementMiddleware(
 
   const state = ctx.state as IBaseContextState;
 
-  const verdict = await antiRaidService.judgeMessage(ctx.message?.text);
+  let banned = false;
 
-  await messagesLoggerRepository.updateMessageVerdict(
-    state.dbMessage.id!,
-    verdict
-  );
+  if (ctx.message.sticker) {
+    const isStickerBanned = await banHammerService.isStickerBanned(ctx.message.sticker);
 
-  if (verdict == MessageJudgementVerdict.Ban) {
-    await ctx.reply(`Banned ${ctx.from?.first_name}`);
+    if (isStickerBanned) {
+      banned = true;
+    }
+  } else {
+    const verdict = await antiRaidService.judgeMessage(ctx.message?.text);
+
+    await messagesLoggerRepository.updateMessageVerdict(
+      state.dbMessage.id!,
+      verdict
+    );
+
+    if (verdict == MessageJudgementVerdict.Ban) {
+     banned = true;
+    }
   }
+
+  if (banned) await ctx.reply(`Banned ${ctx.from?.first_name}`);
 }
 
 export default {

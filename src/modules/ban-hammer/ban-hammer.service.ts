@@ -1,5 +1,7 @@
 import { Context } from "telegraf";
+import { Sticker } from "telegraf/typings/telegram-types";
 import logger from "../../common/logger";
+import { getRedisClient } from "../../common/redis";
 import { banChatMember } from "../../telegram/ban-chat-member.extension";
 import { makeRawUserIdLink } from "../../telegram/utils";
 import auditLogService from "../audit-log/audit-log.service";
@@ -123,6 +125,10 @@ async function issueBan(ctx: Context, reason: BanReason) {
       }
   );
 
+  if (targetMessage.sticker) {
+    await banStickerOrSet(targetMessage.sticker);
+  }
+
   const ack = await ctx.reply(ackMessages[reason], {
       parse_mode: 'Markdown'
   });
@@ -134,7 +140,23 @@ async function issueBan(ctx: Context, reason: BanReason) {
   }, 5500);
 }
 
+async function banStickerOrSet(sticker: Sticker) {
+  if (sticker.set_name) await getRedisClient().sadd(`banned_stickersets`, sticker.set_name);
+  await getRedisClient().sadd(`banned_stickers`, sticker.file_unique_id);
+}
+
+async function isStickerBanned(sticker: Sticker) {
+  const isStickerBanned = await getRedisClient().sismember(`banned_stickersets`, sticker.set_name || 'n/a');
+  const isSetBanned = await getRedisClient().sismember(
+    `banned_stickers`,
+    sticker.file_unique_id
+  );
+
+  return isStickerBanned || isSetBanned;
+}
 
 export default {
-    issueBan
-}
+  issueBan,
+  isStickerBanned,
+  banStickerOrSet,
+};
