@@ -1,12 +1,14 @@
 import { makeRawUserIdLink } from "../../telegram/utils";
+import { BanReason } from "../ban-hammer/ban-hammer.interfaces";
 import { AuditLogEventType } from "./audit-log.types";
+import moment from 'moment'
 
 export interface IAuditLogBaseTemplatePayload {
   chatTitle: string;
   chatLink: string;
 }
 
-export interface IAuditLogBanRussianTemplatePayload
+export interface IAuditLogBanTemplatePayload
   extends IAuditLogBaseTemplatePayload {
   userId: number;
   userFullname: string;
@@ -20,10 +22,13 @@ export interface IAuditLogAntiraidToggleTemplatePayload
     adminFullname: string;
   }
 
+export interface IAuditLogAutobanTemplatePayload extends IAuditLogBanTemplatePayload {
+  banReason: BanReason;
+  banDate: Date;
+}
+
 export default {
-  [AuditLogEventType.BanRussian]: (
-    payload: IAuditLogBanRussianTemplatePayload
-  ) =>
+  [AuditLogEventType.BanRussian]: (payload: IAuditLogBanTemplatePayload) =>
     `🐷🇷🇺 Забанено свинособаку.\n\nАккаунт ${makeRawUserIdLink(
       payload.userFullname,
       payload.userId
@@ -31,7 +36,7 @@ export default {
       payload.adminFullname,
       payload.adminId
     )}\n#bans #rusbot`,
-  [AuditLogEventType.BanSpam]: (payload: IAuditLogBanRussianTemplatePayload) =>
+  [AuditLogEventType.BanSpam]: (payload: IAuditLogBanTemplatePayload) =>
     `🙊 Забанено спамера.\n\nАккаунт ${makeRawUserIdLink(
       payload.userFullname,
       payload.userId
@@ -47,7 +52,7 @@ export default {
     } адміністратором ${makeRawUserIdLink(
       payload.adminFullname,
       payload.adminId
-    )}`,
+    )}\n#antiraid`,
   [AuditLogEventType.DisableAntiraid]: (
     payload: IAuditLogAntiraidToggleTemplatePayload
   ) =>
@@ -56,5 +61,11 @@ export default {
     }, повідомлено адміністратором ${makeRawUserIdLink(
       payload.adminFullname,
       payload.adminId
-    )}`,
+    )}\n#antiraid`,
+  [AuditLogEventType.AutoBan]: (payload: IAuditLogAutobanTemplatePayload) => `
+      🛡 Видано автоматичний бан.\n\nАккаунт: ${makeRawUserIdLink(
+        payload.userFullname,
+        payload.userId
+      )}\nЧат: ${payload.chatLink}\nПричина: ${payload.banReason} від ${moment(payload.banDate).format('DD.MM.YYY HH:mm')}\n#bans
+  `,
 };

@@ -4,16 +4,23 @@ import axios from 'axios'
 import logger from "../../common/logger";
 import { MessageJudgementVerdict } from "./anti-radis.types";
 
-async function isAntiRaidEnabled(chat_id: number) {
-    return await getRedisClient().sismember(`antiraid_chats`, chat_id);
+async function isAntiRaidEnabled(chat_id: number) : Promise<Date | null> {
+    const value  = await getRedisClient().get(`antiraid_mode:${chat_id}`);
+
+    if (value) return new Date(value);
+
+    return null;
 } 
 
 async function markAntiRaidEnabled(chat_id: number) {
-    await getRedisClient().sadd(`antiraid_chats`, chat_id);
+    await getRedisClient().set(
+      `antiraid_mode:${chat_id}`,
+      new Date().toISOString()
+    );
 }
 
 async function markAntiRaidDisabled(chat_id: number) {
-  await getRedisClient().srem(`antiraid_chats`, chat_id);
+  await getRedisClient().del(`antiraid_mode:${chat_id}`);
 } 
 
 async function judgeMessage(text: string): Promise<MessageJudgementVerdict> {

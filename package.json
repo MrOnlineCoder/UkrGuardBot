@@ -16,7 +16,7 @@
     "franc": "^6.0.0",
     "ioredis": "^5.1.0",
     "languagedetect": "^2.0.0",
-    "moment": "^2.29.3",
+    "moment": "^2.29.4",
     "pg": "^8.7.3",
     "telegraf": "3.39"
   },

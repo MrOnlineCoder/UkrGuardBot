@@ -23,7 +23,7 @@ export default {
       `
             INSERT INTO bans (telegram_user_id, telegram_chat_id, telegram_message_id, telegram_admin_id, telegram_sender_type, origin_message_content, is_global, reason)
             VALUES (
-                $1, $2, $3, $4, $5, $6, $7
+                $1, $2, $3, $4, $5, $6, $7, $8
             )
         `,
       [

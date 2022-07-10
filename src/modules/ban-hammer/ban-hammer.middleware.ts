@@ -14,6 +14,7 @@ import logger from "../../common/logger";
 import messagesLoggerRepository from "../messages-logger/messages-logger.repository";
 import { extractSenderMetadata } from "../messages-logger/messages-logger.utils";
 import { TelegramSenderType } from "../messages-logger/messages-logger.interfaces";
+import banHammerService from "./ban-hammer.service";
 
 async function banHammerGeneralMiddleware(ctx: Context, next: Function) {
   if (ctx.chat?.type == "private") return null;
@@ -45,125 +46,12 @@ async function banHammerGeneralMiddleware(ctx: Context, next: Function) {
   next();
 }
 
-async function issueInOtherChats(ctx: Context, ban: IBan) {
-  const messages = await messagesLoggerRepository.findLastMessagesOfUser(
-    ban.telegramUserId,
-    24 * 60 * 60 * 1000 // 24 hours
-  );
-
-  logger.log(
-    `BanHammer`,
-    `Found ${messages.length} total messages for banning user ${ban.telegramUserId}`
-  );
-
-  const bannedChatIds = new Set();
-
-  for (const msg of messages) {
-    try {
-      await ctx.telegram.deleteMessage(
-        msg.telegramChatId,
-        msg.telegramMessageId
-      );
-
-      logger.log(
-        `BanHammer`,
-        `Deleted message ${msg.telegramMessageId} in chat ${msg.telegramChatId} (${msg.telegramChatTitle}) of banned user ${msg.senderName} (${msg.telegramSenderId})`
-      );
-
-      if (!bannedChatIds.has(msg.telegramChatId)) {
-        if (msg.telegramSenderType === TelegramSenderType.USER)
-          await banChatMember(
-            ctx,
-            msg.telegramChatId,
-            msg.telegramSenderId!,
-            true
-          );
-
-        bannedChatIds.add(msg.telegramChatId);
-      }
-    } catch (err) {
-      logger.error(
-        `BanHammer`,
-        `Error happened while cleaning up message ${msg.telegramMessageId} for chat ${msg.telegramChatId} for user ${msg.telegramSenderId}`,
-        err
-      );
-    }
-  }
-}
-
 async function rusBanMiddleware(ctx: Context, next: Function) {
-  const { targetSenderMetadata, targetMessage, dbMessage } =
-    ctx.state as IBanHammerMiddlewareState;
-
-  if (targetSenderMetadata.telegramSenderType === TelegramSenderType.USER)
-    await banChatMember(
-      ctx,
-      ctx.chat?.id!,
-      targetSenderMetadata.telegramSenderId!,
-      true
-    );
-  await ctx.deleteMessage();
-
-  const ban: IBan = {
-    isGlobal: true,
-    telegramChatId: ctx.chat?.id!,
-    telegramAdminId: ctx.from?.id!,
-    telegramMessageId: targetMessage.message_id,
-    telegramUserId: targetSenderMetadata.telegramSenderId!,
-    telegramSenderType: dbMessage.telegramSenderType,
-    originMessageContent: ctx.message?.text || null,
-    banDate: new Date(),
-    reason: BanReason.RUSSIAN_ORC,
-  };
-
-  await BanHammerRepository.insertBan(ban);
-
-  const ack = await ctx.reply(
-    `🇷🇺🖕 Русню під іменем ${targetSenderMetadata.senderName} (ID ${targetSenderMetadata.telegramSenderId}) забанено. Вартовий бот тепер не допустить його в жоден інший чат під охороною.`
-  );
-
-  await issueInOtherChats(ctx, ban);
-
-  setTimeout(async () => {
-    await ctx.telegram.deleteMessage(ack.chat.id, ack.message_id);
-  }, 5500);
+  await banHammerService.issueBan(ctx, BanReason.RUSSIAN_ORC);
 }
 
 async function spamBanMiddleware(ctx: Context, next: Function) {
-  const { targetMessage, targetSenderMetadata } =
-    ctx.state as IBanHammerMiddlewareState;
-
-  await banChatMember(
-    ctx,
-    ctx.chat?.id!,
-    targetSenderMetadata.telegramSenderId!,
-    true
-  );
-  await ctx.deleteMessage();
-
-  const ban: IBan = {
-    isGlobal: true,
-    telegramChatId: ctx.chat?.id!,
-    telegramAdminId: ctx.from?.id!,
-    originMessageContent: targetMessage.text || null,
-    telegramMessageId: targetMessage.message_id,
-    telegramUserId: targetSenderMetadata.telegramSenderId!,
-    telegramSenderType: targetSenderMetadata.telegramSenderType,
-    banDate: new Date(),
-    reason: BanReason.SPAM,
-  };
-
-  await BanHammerRepository.insertBan(ban);
-
-  const ack = await ctx.reply(
-    `🗣❌ Спамера під іменем ${targetSenderMetadata.senderName} (ID ${targetSenderMetadata.telegramSenderId}) забанено. Вартовий бот тепер не допустить його в жоден інший чат під охороною.`
-  );
-
-  await issueInOtherChats(ctx, ban);
-
-  setTimeout(async () => {
-    await ctx.telegram.deleteMessage(ack.chat.id, ack.message_id);
-  }, 7500);
+  await banHammerService.issueBan(ctx, BanReason.SPAM);
 }
 
 async function banHammerWatcher(ctx: Context, next: Function) {
