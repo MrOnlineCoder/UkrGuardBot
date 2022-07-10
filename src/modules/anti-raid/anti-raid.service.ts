@@ -34,7 +34,7 @@ async function judgeMessage(text: string): Promise<MessageJudgementVerdict> {
             }
         });
 
-        logger.log(`AntiRaidService`, `Judgement finished form message "${text}": ${response.data.result}`);
+        logger.log(`AntiRaidService`, `Judgement finished for message "${text.substring(0,32)}": ${response.data.result}`);
 
         return response.data.result;
     } catch(err) {

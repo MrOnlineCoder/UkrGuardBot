@@ -57,20 +57,25 @@ async function votebanMiddleware(ctx: Context, next: Function) {
     targetMetadata.telegramSenderId!
   );
 
+  const chatMembersCount = await ctx.getChatMembersCount();
+
+  const requiredVotesCount = votebanService.getRequiredVotesCount(chatMembersCount);
+
   const targetLink = makeRawUserIdLink(
     targetMetadata.senderName!,
     targetMetadata.telegramSenderId!
   );
 
-  if (votesCount < votebanService.NEEDED_VOTES) {
+  if (votesCount < requiredVotesCount) {
     await ctx.reply(
       `🗳 ${makeRawUserIdLink(
         state.dbMessage.senderName!,
         state.dbMessage.telegramSenderId!
       )} проголосував за бан ${targetLink}, набрано ${votesCount} / ${
         votebanService.NEEDED_VOTES
-      } голосів.`, {
-          parse_mode: 'Markdown'
+      } голосів.`,
+      {
+        parse_mode: "Markdown",
       }
     );
   } else {
@@ -84,29 +89,28 @@ async function votebanMiddleware(ctx: Context, next: Function) {
       },
     });
 
-    await ctx.reply(`🏹 За результатами голосування, ${targetLink} був заблокований на декілька годин. Адміністраторам чата було повідомлено про необхідність перевірки даного користувача.`, {
-        parse_mode: 'Markdown'
-    });
+    await ctx.reply(
+      `🏹 За результатами голосування, ${targetLink} був заблокований на декілька годин. Адміністраторам чата було повідомлено про необхідність перевірки даного користувача.`,
+      {
+        parse_mode: "Markdown",
+      }
+    );
 
     const admins = await ctx.getChatAdministrators();
 
     const adminMentions = [];
 
     for (const admin of admins) {
-        if (admin.user.username) {
-            adminMentions.push(`@${admin.user.username!}`);
-        }
+      if (admin.user.username) {
+        adminMentions.push(`@${admin.user.username!}`);
+      }
     }
 
-    await auditLogService.writeLog(
-        ctx.chat!,
-        AuditLogEventType.Votebanned,
-        {
-            userId: targetMetadata.telegramSenderId,
-            userFullname: targetMetadata.senderName,
-            adminList: adminMentions.join(' ')
-        }
-    );
+    await auditLogService.writeLog(ctx.chat!, AuditLogEventType.Votebanned, {
+      userId: targetMetadata.telegramSenderId,
+      userFullname: targetMetadata.senderName,
+      adminList: adminMentions.join(" "),
+    });
   }
 }
 

@@ -5,6 +5,12 @@ const BAN_DURATION = 12 * 60 * 60; //12 hours
 const NEEDED_VOTES = 3;
 const VOTING_DURATION = 1 * 60 * 60; //1 hour
 
+function getRequiredVotesCount(chatSize: number) {
+    if (chatSize <= 100) return 3;
+    if (chatSize <= 500) return 4;
+    return 5;
+}
+
 async function startJoinCountdown(chatId: number, userId: number) {
     await getRedisClient().set(`join_countdown:${chatId}:${userId}`, new Date().toISOString(), "EX", JOIN_COUNTDOWN);
 }
@@ -28,5 +34,6 @@ export default {
   startJoinCountdown,
   isOnCountdown,
   putVote,
+  getRequiredVotesCount,
   BAN_DURATION,
 };
