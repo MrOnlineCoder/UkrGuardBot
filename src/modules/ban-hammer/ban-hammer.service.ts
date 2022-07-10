@@ -2,11 +2,11 @@ import { Context } from "telegraf";
 import { Sticker } from "telegraf/typings/telegram-types";
 import logger from "../../common/logger";
 import { getRedisClient } from "../../common/redis";
-import { banChatMember } from "../../telegram/ban-chat-member.extension";
+import { banChatMember, banChatSenderChat } from "../../telegram/ban-chat-member.extension";
 import { makeRawUserIdLink } from "../../telegram/utils";
 import auditLogService from "../audit-log/audit-log.service";
 import { AuditLogEventType } from "../audit-log/audit-log.types";
-import { TelegramSenderType } from "../messages-logger/messages-logger.interfaces";
+import { IMessageSenderMetadata, TelegramSenderType } from "../messages-logger/messages-logger.interfaces";
 import messagesLoggerRepository from "../messages-logger/messages-logger.repository";
 import { deleteMessageInTelegramAndDb } from "../messages-logger/messages-logger.utils";
 import {
@@ -63,18 +63,20 @@ async function issueInOtherChats(ctx: Context, ban: IBan) {
   }
 }
 
-async function issueBan(ctx: Context, reason: BanReason) {
+async function banBySenderMetadata(ctx: Context, metadata: IMessageSenderMetadata) {
+   if (metadata.telegramSenderType === TelegramSenderType.USER) {
+     await banChatMember(ctx, ctx.chat?.id!, metadata.telegramSenderId!, true);
+   } else {
+     await banChatSenderChat(ctx, ctx.chat?.id!, metadata.telegramSenderId!);
+   }
+}
+
+async function issueBan(ctx: Context, reason: BanReason, isGlobal = true, silent = false) {
   const { targetSenderMetadata, targetMessage, dbMessage } =
     ctx.state as IBanHammerMiddlewareState;
 
-  if (targetSenderMetadata.telegramSenderType === TelegramSenderType.USER)
-    await banChatMember(
-      ctx,
-      ctx.chat?.id!,
-      targetSenderMetadata.telegramSenderId!,
-      true
-    );
-
+  await banBySenderMetadata(ctx, targetSenderMetadata);
+    
   await deleteMessageInTelegramAndDb(
     ctx,
     ctx.chat?.id!,
@@ -82,7 +84,7 @@ async function issueBan(ctx: Context, reason: BanReason) {
   );
 
   const ban: IBan = {
-    isGlobal: true,
+    isGlobal,
     telegramChatId: ctx.chat?.id!,
     telegramAdminId: ctx.from?.id!,
     telegramMessageId: targetMessage.message_id,
@@ -159,4 +161,5 @@ export default {
   issueBan,
   isStickerBanned,
   banStickerOrSet,
+  banBySenderMetadata
 };

@@ -8,9 +8,11 @@ import antiRaidService from "./anti-raid.service";
 import auditLogService from "../audit-log/audit-log.service";
 import { AuditLogEventType } from "../audit-log/audit-log.types";
 
-import moment from 'moment'
+import moment from "moment";
 import { deleteMessageInTelegramAndDb } from "../messages-logger/messages-logger.utils";
 import banHammerService from "../ban-hammer/ban-hammer.service";
+import { banChatMember } from "../../telegram/ban-chat-member.extension";
+import logger from "../../common/logger";
 
 async function antiRaidCommandMiddleware(
   ctx: Context,
@@ -32,7 +34,9 @@ async function antiRaidCommandMiddleware(
     if (commandToken === "+") {
       if (antiRaidEnablingDate)
         return await ctx.reply(
-          `🛑 Антирейд вже триває з ${moment(antiRaidEnablingDate).format('DD.MM.YYYY HH:mm')}`
+          `🛑 Антирейд вже триває з ${moment(antiRaidEnablingDate).format(
+            "DD.MM.YYYY HH:mm"
+          )}`
         );
 
       await antiRaidService.markAntiRaidEnabled(chatId);
@@ -45,11 +49,7 @@ async function antiRaidCommandMiddleware(
         }
       );
 
-      await deleteMessageInTelegramAndDb(
-        ctx,
-        chatId,
-        ctx.message?.message_id!
-      );
+      await deleteMessageInTelegramAndDb(ctx, chatId, ctx.message?.message_id!);
 
       return await ctx.reply(
         `❗️ Увага! Оголошена рейдова тривога. Бот зараз буде видавати бани наліво і направо всім свинособакам які намагатимуться відправити щось в чат.`
@@ -57,38 +57,33 @@ async function antiRaidCommandMiddleware(
     }
 
     if (commandToken === "-") {
-        if (!antiRaidEnablingDate)
-          return await ctx.reply(`👍 Антирейд наразі не є ввімкненим`);
+      if (!antiRaidEnablingDate)
+        return await ctx.reply(`👍 Антирейд наразі не є ввімкненим`);
 
-        await antiRaidService.markAntiRaidDisabled(chatId);
-        await auditLogService.writeLog(
-          ctx.chat!,
-          AuditLogEventType.DisableAntiraid,
-          {
-            adminId: ctx.from?.id!,
-            adminFullname: (ctx.state as IBaseContextState).dbMessage
-              .senderName,
-          }
-        );
+      await antiRaidService.markAntiRaidDisabled(chatId);
+      await auditLogService.writeLog(
+        ctx.chat!,
+        AuditLogEventType.DisableAntiraid,
+        {
+          adminId: ctx.from?.id!,
+          adminFullname: (ctx.state as IBaseContextState).dbMessage.senderName,
+        }
+      );
 
-        await deleteMessageInTelegramAndDb(
-          ctx,
-          chatId,
-          ctx.message?.message_id!
-        );
+      await deleteMessageInTelegramAndDb(ctx, chatId, ctx.message?.message_id!);
 
-        return await ctx.reply(`✅ Відбій рейдової тривоги.`);
+      return await ctx.reply(`✅ Відбій рейдової тривоги.`);
     }
   }
 
   if (antiRaidEnablingDate) {
-      return await ctx.reply(
-        `🛑 Антирейд активний з ${moment(antiRaidEnablingDate).format(
-          "DD.MM.YYYY HH:mm"
-        )}`
-      );
+    return await ctx.reply(
+      `🛑 Антирейд активний з ${moment(antiRaidEnablingDate).format(
+        "DD.MM.YYYY HH:mm"
+      )}`
+    );
   } else {
-      return await ctx.reply(`👍 Режим антирейда вимкнений.`);
+    return await ctx.reply(`👍 Режим антирейда вимкнений.`);
   }
 }
 
@@ -106,12 +101,18 @@ async function antiRaidJudgementMiddleware(
 
   if (!isAntiRaidEnabled) return next();
 
+  const isAdmin = await isChatAdmin(ctx);
+
+  if (isAdmin) return next();
+
   const state = ctx.state as IBaseContextState;
 
   let banned = false;
 
   if (ctx.message.sticker) {
-    const isStickerBanned = await banHammerService.isStickerBanned(ctx.message.sticker);
+    const isStickerBanned = await banHammerService.isStickerBanned(
+      ctx.message.sticker
+    );
 
     if (isStickerBanned) {
       banned = true;
@@ -125,11 +126,32 @@ async function antiRaidJudgementMiddleware(
     );
 
     if (verdict == MessageJudgementVerdict.Ban) {
-     banned = true;
+      banned = true;
     }
   }
 
-  if (banned) await ctx.reply(`Banned ${ctx.from?.first_name}`);
+  if (banned) {
+    try {
+      await deleteMessageInTelegramAndDb(
+        ctx,
+        ctx.chat?.id!,
+        ctx.message.message_id
+      );
+
+      await banHammerService.banBySenderMetadata(ctx, state.dbMessage);
+
+      await auditLogService.writeLog(ctx.chat!, AuditLogEventType.RaidBan, {
+        userId: state.dbMessage.telegramSenderId,
+        userFullname: state.dbMessage.senderName,
+      });
+    } catch (err) {
+      logger.error(
+        `Antiraid`,
+        `Failed to autoban during raid in chat ${ctx.chat!.id!}`,
+        err
+      );
+    }
+  }
 }
 
 export default {

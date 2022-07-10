@@ -64,8 +64,13 @@ export default {
       payload.adminFullname,
       payload.adminId
     )}\n#antiraid`,
-  [AuditLogEventType.AutoBan]: (payload: IAuditLogAutobanTemplatePayload) => `🛡 Видано автоматичний бан.\n\nАккаунт: ${makeRawUserIdLink(
-        payload.userFullname,
-        payload.userId
-      )}\nЧат: ${payload.chatLink}\nПричина: \`${payload.banReason}\` від ${moment(payload.banDate).format('DD.MM.YYYY HH:mm')}`,
+  [AuditLogEventType.AutoBan]: (payload: IAuditLogAutobanTemplatePayload) =>
+    `🛡 Видано автоматичний бан.\n\nАккаунт: ${makeRawUserIdLink(
+      payload.userFullname,
+      payload.userId
+    )}\nЧат: ${payload.chatLink}\nПричина: \`${
+      payload.banReason
+    }\` від ${moment(payload.banDate).format("DD.MM.YYYY HH:mm")}`,
+  [AuditLogEventType.RaidBan]: (payload: IAuditLogAutobanTemplatePayload) =>
+    `⚔️ Видано автоматично бан під час рейду.\n\nАккаунт: ${makeRawUserIdLink(payload.userFullname, payload.userId)}\nЧат: ${payload.chatLink}`,
 };

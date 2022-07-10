@@ -7,3 +7,14 @@ export async function banChatMember(ctx: Context, chatId: number, userId: number
       revoke_messages: revokeMessages,
     });
 }
+
+export async function banChatSenderChat(
+  ctx: Context,
+  chatId: number,
+  senderChatId: number,
+) {
+  await ctx.telegram.callApi("banChatSenderChat", {
+    chat_id: chatId,
+    sender_chat_id: senderChatId,
+  });
+}

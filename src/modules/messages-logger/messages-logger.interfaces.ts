@@ -1,4 +1,4 @@
-export interface IMessage {
+export interface IMessage extends IMessageSenderMetadata {
   id?: number;
   telegramMessageId: number;
   telegramChatId: number;

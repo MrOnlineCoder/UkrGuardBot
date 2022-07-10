@@ -40,7 +40,7 @@ export default {
   },
   findBansByUserId: async (
     userId: number,
-    isGlobal = true
+    isGlobal = true,
   ): Promise<IBan[]> => {
     const { rows } = await getDbClient().query(
       `
@@ -54,7 +54,7 @@ export default {
   findSpamBansByContent: async (content: string): Promise<IBan[]> => {
     const { rows } = await getDbClient().query(
       `
-                SELECT * FROM bans WHERE reason = $1 AND origin_message_content = $2 AND is_global = $3 
+                SELECT * FROM bans WHERE reason = $1 AND origin_message_content = $2 AND is_global = $3
             `,
       [BanReason.SPAM, content, true]
     );
