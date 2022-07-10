@@ -4,6 +4,7 @@ const JOIN_COUNTDOWN = 12 * 60 * 60; //12 hours
 const BAN_DURATION = 12 * 60 * 60; //12 hours
 const NEEDED_VOTES = 3;
 const VOTING_DURATION = 1 * 60 * 60; //1 hour
+const VOTING_COUNTDOWN = 20 * 60; //20 minutes
 
 function getRequiredVotesCount(chatSize: number) {
     if (chatSize <= 100) return 3;
@@ -11,12 +12,25 @@ function getRequiredVotesCount(chatSize: number) {
     return 5;
 }
 
+async function startVotebanCountdown(chatId: number, userId: number) {
+    await getRedisClient().set(
+      `voteban_countdown:${chatId}:${userId}`,
+      new Date().toISOString(),
+      "EX",
+      VOTING_COUNTDOWN
+    );
+}
+
+async function isOnVotebanCountdown(chatId: number, userId: number) {
+    return await getRedisClient().exists(`voteban_countdown:${chatId}:${userId}`); 
+}
+
 async function startJoinCountdown(chatId: number, userId: number) {
     await getRedisClient().set(`join_countdown:${chatId}:${userId}`, new Date().toISOString(), "EX", JOIN_COUNTDOWN);
 }
 
-async function isOnCountdown(chatId: number, userId: number) {
-    return await getRedisClient().exists(`join_countdown:${chatId}:${userId}`);
+async function isOnJoinCountdown(chatId: number, userId: number) {
+  return await getRedisClient().exists(`join_countdown:${chatId}:${userId}`);
 }
 
 async function putVote(chatId: number, voterId: number, targetId: number): Promise<number> {
@@ -32,8 +46,10 @@ async function putVote(chatId: number, voterId: number, targetId: number): Promi
 export default {
   NEEDED_VOTES,
   startJoinCountdown,
-  isOnCountdown,
+  isOnJoinCountdown,
   putVote,
   getRequiredVotesCount,
   BAN_DURATION,
+  isOnVotebanCountdown,
+  startVotebanCountdown,
 };

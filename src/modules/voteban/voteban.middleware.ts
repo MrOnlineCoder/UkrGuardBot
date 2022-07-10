@@ -34,14 +34,31 @@ async function votebanMiddleware(ctx: Context, next: Function) {
   if (state.dbMessage.telegramSenderType != TelegramSenderType.USER)
     return next();
 
-  const countdown = await votebanService.isOnCountdown(
+  const joinCountdown = await votebanService.isOnJoinCountdown(
     ctx.chat.id!,
     ctx.from?.id!
   );
 
-  if (countdown) {
+  if (joinCountdown) {
     const ack = await ctx.reply(
       `⏱ ${state.dbMessage.senderName}, для голосування за бан, Вам необіхдно пробути в чаті щонайменше 1 добу.`
+    );
+
+    setTimeout(async () => {
+      await ctx.deleteMessage(ack.message_id);
+    }, 6500);
+
+    return;
+  }
+
+  const votingCountdown = await votebanService.isOnVotebanCountdown(
+    ctx.chat.id!,
+    ctx.from?.id!
+  );
+
+  if (votingCountdown) {
+    const ack = await ctx.reply(
+      `⏱ ${state.dbMessage.senderName}, Ви можете розпочинати голосування на бан лише раз в 20 хвилин. Зачекайте будь ласка.`
     );
 
     setTimeout(async () => {
@@ -67,6 +84,14 @@ async function votebanMiddleware(ctx: Context, next: Function) {
   );
 
   if (votesCount < requiredVotesCount) {
+    if (votesCount == 1) {
+      //we just started the voting right now
+      await votebanService.startVotebanCountdown(
+        ctx.chat?.id!,
+        state.dbMessage.telegramSenderId!
+      );
+    }
+
     await ctx.reply(
       `🗳 ${makeRawUserIdLink(
         state.dbMessage.senderName!,
