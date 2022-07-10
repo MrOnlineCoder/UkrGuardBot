@@ -38,7 +38,7 @@ export interface IAuditLogVotebanTemplatePayload extends IAuditLogBaseTemplatePa
 export default {
   [AuditLogEventType.BanRussian]: (payload: IAuditLogBanTemplatePayload) =>
     `🐷🇷🇺 Забанено свинособаку.\n\nАккаунт: ${makeRawUserIdLink(
-      payload.userFullname,
+      `${payload.userFullname} #${payload.userId}`,
       payload.userId
     )}\nЧат: ${payload.chatLink}\nАдмін: ${makeRawUserIdLink(
       payload.adminFullname,
@@ -46,7 +46,7 @@ export default {
     )}\n#bans #rusbot`,
   [AuditLogEventType.BanSpam]: (payload: IAuditLogBanTemplatePayload) =>
     `🙊 Забанено спамера.\n\nАккаунт: ${makeRawUserIdLink(
-      payload.userFullname,
+      `${payload.userFullname} #${payload.userId}`,
       payload.userId
     )}\nЧат: ${payload.chatLink}\nАдмін: ${makeRawUserIdLink(
       payload.adminFullname,
@@ -72,19 +72,19 @@ export default {
     )}\n#antiraid`,
   [AuditLogEventType.AutoBan]: (payload: IAuditLogAutobanTemplatePayload) =>
     `🛡 Видано автоматичний бан.\n\nАккаунт: ${makeRawUserIdLink(
-      payload.userFullname,
+      `${payload.userFullname} #${payload.userId}`,
       payload.userId
     )}\nЧат: ${payload.chatLink}\nПричина: \`${
       payload.banReason
     }\` від ${moment(payload.banDate).format("DD.MM.YYYY HH:mm")}`,
   [AuditLogEventType.RaidBan]: (payload: IAuditLogAutobanTemplatePayload) =>
     `⚔️ Видано автоматично бан під час рейду.\n\nАккаунт: ${makeRawUserIdLink(
-      payload.userFullname,
+      `${payload.userFullname} #${payload.userId}`,
       payload.userId
     )}\nЧат: ${payload.chatLink}`,
   [AuditLogEventType.Votebanned]: (payload: IAuditLogVotebanTemplatePayload) =>
     `🏹 Видано тимчасовий бан за голосуванням.\nАккаунт: ${makeRawUserIdLink(
-      payload.userFullname,
+      `${payload.userFullname} #${payload.userId}`,
       payload.userId
     )}\nЧат: ${payload.chatLink}\nПовідомлення адмінам: ${payload.adminList}`,
 };
