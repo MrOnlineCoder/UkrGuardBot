@@ -80,7 +80,7 @@ async function issueBan(ctx: Context, reason: BanReason) {
     telegramMessageId: targetMessage.message_id,
     telegramUserId: targetSenderMetadata.telegramSenderId!,
     telegramSenderType: dbMessage.telegramSenderType,
-    originMessageContent: ctx.message?.text || null,
+    originMessageContent: targetMessage.text || null,
     banDate: new Date(),
     reason: reason,
   };

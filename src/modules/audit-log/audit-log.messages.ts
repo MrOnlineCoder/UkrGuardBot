@@ -29,7 +29,7 @@ export interface IAuditLogAutobanTemplatePayload extends IAuditLogBanTemplatePay
 
 export default {
   [AuditLogEventType.BanRussian]: (payload: IAuditLogBanTemplatePayload) =>
-    `🐷🇷🇺 Забанено свинособаку.\n\nАккаунт ${makeRawUserIdLink(
+    `🐷🇷🇺 Забанено свинособаку.\n\nАккаунт: ${makeRawUserIdLink(
       payload.userFullname,
       payload.userId
     )}\nЧат: ${payload.chatLink}\nАдмін: ${makeRawUserIdLink(
@@ -37,7 +37,7 @@ export default {
       payload.adminId
     )}\n#bans #rusbot`,
   [AuditLogEventType.BanSpam]: (payload: IAuditLogBanTemplatePayload) =>
-    `🙊 Забанено спамера.\n\nАккаунт ${makeRawUserIdLink(
+    `🙊 Забанено спамера.\n\nАккаунт: ${makeRawUserIdLink(
       payload.userFullname,
       payload.userId
     )}\nЧат: ${payload.chatLink}\nАдмін: ${makeRawUserIdLink(
