@@ -2,7 +2,7 @@ import { getRedisClient } from "../../common/redis";
 
 const JOIN_COUNTDOWN = 12 * 60 * 60; //12 hours
 const BAN_DURATION = 12 * 60 * 60; //12 hours
-const NEEDED_VOTES = 1;
+const NEEDED_VOTES = 3;
 const VOTING_DURATION = 1 * 60 * 60; //1 hour
 
 async function startJoinCountdown(chatId: number, userId: number) {
