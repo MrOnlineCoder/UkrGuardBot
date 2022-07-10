@@ -1,9 +1,11 @@
 import { Context } from "telegraf";
 import { Chat, Message, User } from "telegraf/typings/telegram-types";
+import logger from "../../common/logger";
 import {
   IMessageSenderMetadata,
   TelegramSenderType,
 } from "./messages-logger.interfaces";
+import messagesLoggerRepository from "./messages-logger.repository";
 
 export function getTelegramSenderTypeFromMessage(
   message?: Message
@@ -51,4 +53,26 @@ export function extractSenderMetadata(
   }
 
   return meta;
+}
+
+export async function deleteMessageInTelegramAndDb(
+  ctx: Context,
+  chatId: number,
+  messageId: number
+) {
+  try {
+    await ctx.telegram.deleteMessage(chatId, messageId);
+
+    await messagesLoggerRepository.setMessageDeletionDateByChatId(
+      chatId,
+      messageId,
+      new Date()
+    );
+  } catch (err) {
+    logger.error(
+      `MessagesLogger`,
+      `Failed to delete message ${chatId}/${messageId}`,
+      err
+    );
+  }
 }

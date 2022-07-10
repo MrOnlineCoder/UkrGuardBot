@@ -15,4 +15,17 @@ async function start() {
     Logger.log('Main', 'Bot started');
 }
 
-start();
+start().catch(err => {
+    console.error(`start() caught error:`,err);
+    process.exit(1);
+});
+
+process.on("uncaughtException", async (error) => {
+  console.error(`uncaughtException`, error);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", async (error) => {
+  console.error(`unhandledRejection`, error);
+  process.exit(1);
+});

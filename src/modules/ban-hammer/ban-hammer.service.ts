@@ -6,6 +6,7 @@ import auditLogService from "../audit-log/audit-log.service";
 import { AuditLogEventType } from "../audit-log/audit-log.types";
 import { TelegramSenderType } from "../messages-logger/messages-logger.interfaces";
 import messagesLoggerRepository from "../messages-logger/messages-logger.repository";
+import { deleteMessageInTelegramAndDb } from "../messages-logger/messages-logger.utils";
 import {
   BanReason,
   IBan,
@@ -28,7 +29,8 @@ async function issueInOtherChats(ctx: Context, ban: IBan) {
 
   for (const msg of messages) {
     try {
-      await ctx.telegram.deleteMessage(
+      await deleteMessageInTelegramAndDb(
+        ctx,
         msg.telegramChatId,
         msg.telegramMessageId
       );
@@ -71,7 +73,11 @@ async function issueBan(ctx: Context, reason: BanReason) {
       true
     );
 
-  await ctx.deleteMessage();
+  await deleteMessageInTelegramAndDb(
+    ctx,
+    ctx.chat?.id!,
+    ctx.message?.message_id!
+  );
 
   const ban: IBan = {
     isGlobal: true,

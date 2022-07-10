@@ -11,6 +11,7 @@ export interface IMessage {
   content: string;
   sentAt: Date;
   moderationVerdict?: string;
+  deletedAt?: Date | null;
 }
 
 export enum TelegramSenderType {

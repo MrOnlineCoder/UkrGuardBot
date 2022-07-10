@@ -17,13 +17,14 @@ function mapRowToMessage(row: any): IMessage {
         senderUsername: row.sender_username,
         telegramMessageId: row.telegram_message_id,
         moderationVerdict: row.moderation_verdict,
-        telegramSenderType: row.telegram_sender_type
+        telegramSenderType: row.telegram_sender_type,
+        deletedAt: row.deleted_at
     }
 }
 
 export default {
   insert: async (message: IMessage): Promise<IMessage> => {
-    const {rows} = await getDbClient().query(
+    const { rows } = await getDbClient().query(
       `INSERT INTO messages 
             (telegram_message_id, telegram_chat_id, telegram_sender_id, telegram_sender_type, sender_name, sender_username, content_type, content, sent_at, moderation_verdict, telegram_chat_title) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
@@ -47,22 +48,43 @@ export default {
 
     return {
       ...message,
-      id: insertedId
-    }
+      id: insertedId,
+    };
   },
-  findLastMessagesOfUser: async (userId: number, agoMillis: number = MS_PER_HOUR) => {
-      const { rows } = await getDbClient().query(`
-        SELECT * FROM messages WHERE telegram_sender_id = $1 AND sent_at > $2
-      `, [
-          userId,
-          new Date(Date.now() - agoMillis)
-      ]);
+  findLastMessagesOfUser: async (
+    userId: number,
+    agoMillis: number = MS_PER_HOUR
+  ) => {
+    const { rows } = await getDbClient().query(
+      `
+        SELECT * FROM messages WHERE telegram_sender_id = $1 AND sent_at > $2 AND deleted_at is NULL
+      `,
+      [userId, new Date(Date.now() - agoMillis)]
+    );
 
-      return rows.map(mapRowToMessage);
+    return rows.map(mapRowToMessage);
   },
-  updateMessageVerdict: async (messageId: number, veridct: MessageJudgementVerdict) => {
-    await getDbClient().query(`
+  updateMessageVerdict: async (
+    messageId: number,
+    veridct: MessageJudgementVerdict
+  ) => {
+    await getDbClient().query(
+      `
       UPDATE messages SET moderation_verdict = $1 WHERE id = $2
-    `, [veridct, messageId]);
-  }
+    `,
+      [veridct, messageId]
+    );
+  },
+  setMessageDeletionDate: async (messageId: number, date: Date | null) => {
+    await getDbClient().query(
+      `UPDATE messages SET deleted_at = $1 WHERE id = $2`,
+      [date, messageId]
+    );
+  },
+  setMessageDeletionDateByChatId: async (telegramChatId: number, telegramMessageId: number, date: Date | null) => {
+    await getDbClient().query(
+      `UPDATE messages SET deleted_at = $1 WHERE telegram_chat_id = $2 AND telegram_message_id = $3`,
+      [date, telegramChatId, telegramMessageId]
+    );
+  },
 };

@@ -1,0 +1,1 @@
+ALTER TABLE messages ADD deleted_at timestamptz DEFAULT NULL;

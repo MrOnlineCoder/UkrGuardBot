@@ -9,6 +9,7 @@ import auditLogService from "../audit-log/audit-log.service";
 import { AuditLogEventType } from "../audit-log/audit-log.types";
 
 import moment from 'moment'
+import { deleteMessageInTelegramAndDb } from "../messages-logger/messages-logger.utils";
 
 async function antiRaidCommandMiddleware(
   ctx: Context,
@@ -43,7 +44,11 @@ async function antiRaidCommandMiddleware(
         }
       );
 
-      await ctx.deleteMessage();
+      await deleteMessageInTelegramAndDb(
+        ctx,
+        chatId,
+        ctx.message?.message_id!
+      );
 
       return await ctx.reply(
         `❗️ Увага! Оголошена рейдова тривога. Бот зараз буде видавати бани наліво і направо всім свинособакам які намагатимуться відправити щось в чат.`
@@ -65,7 +70,11 @@ async function antiRaidCommandMiddleware(
           }
         );
 
-        await ctx.deleteMessage();
+        await deleteMessageInTelegramAndDb(
+          ctx,
+          chatId,
+          ctx.message?.message_id!
+        );
 
         return await ctx.reply(`✅ Відбій рейдової тривоги.`);
     }

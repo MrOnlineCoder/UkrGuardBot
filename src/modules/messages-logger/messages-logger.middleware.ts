@@ -54,6 +54,6 @@ export default async (ctx: Context, next: () => Promise<void>) => {
   } catch(err) {
       logger.error(`MessagesLogger`, `Error writing message to DB`, err);
   }
-
+  
   next();
 };

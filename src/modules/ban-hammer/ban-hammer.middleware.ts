@@ -12,7 +12,7 @@ import {
 import { Message } from "telegraf/typings/telegram-types";
 import logger from "../../common/logger";
 import messagesLoggerRepository from "../messages-logger/messages-logger.repository";
-import { extractSenderMetadata } from "../messages-logger/messages-logger.utils";
+import { deleteMessageInTelegramAndDb, extractSenderMetadata } from "../messages-logger/messages-logger.utils";
 import { IBaseContextState, TelegramSenderType } from "../messages-logger/messages-logger.interfaces";
 import banHammerService from "./ban-hammer.service";
 import auditLogService from "../audit-log/audit-log.service";
@@ -75,7 +75,7 @@ async function banHammerWatcher(ctx: Context, next: Function) {
         ban.reason
       } since ${ban.banDate.toISOString()}. Banning in chat...`
     );
-    if (ctx.message) await ctx.deleteMessage();
+    if (ctx.message) await deleteMessageInTelegramAndDb(ctx, ctx.chat?.id!, ctx.message?.message_id!);
     await banChatMember(ctx, ctx.chat?.id!, ban.telegramUserId, true);
     await auditLogService.writeLog(
       ctx.chat!,
