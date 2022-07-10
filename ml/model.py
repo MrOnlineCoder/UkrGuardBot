@@ -4,6 +4,7 @@ from sklearn.metrics import confusion_matrix
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn import svm
 
 cv = CountVectorizer()
 
@@ -16,7 +17,7 @@ class AntispamModel:
 
         train_X = cv.fit_transform(X)
 
-        model = BernoulliNB()
+        model = svm.SVC()
 
         model.fit(train_X, Y)
 
