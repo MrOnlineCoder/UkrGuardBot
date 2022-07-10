@@ -25,7 +25,7 @@ export default async (ctx: Context, next: () => Promise<void>) => {
   if (ctx.message?.text) dbMessageContent = ctx.message.text;
   if (ctx.message?.photo)
     dbMessageContent = ctx.message.photo.map((p) => p.file_id).join();
-  if (ctx.message?.sticker) dbMessageContent = ctx.message.sticker.file_id;
+  if (ctx.message?.sticker) dbMessageContent = ctx.message.sticker.file_unique_id;
   if (ctx.message?.video)
     dbMessageContent = [
       ctx.message.video.file_id,
