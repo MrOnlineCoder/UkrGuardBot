@@ -4,5 +4,6 @@ export enum AuditLogEventType {
     AutoBan = 'auto_ban',
     EnableAntiraid = 'enable_antiraid',
     DisableAntiraid = 'disable_antiraid',
-    RaidBan = 'raid_ban'
+    RaidBan = 'raid_ban',
+    Votebanned = 'votebanned'
 }

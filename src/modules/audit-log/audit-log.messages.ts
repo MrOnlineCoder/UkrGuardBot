@@ -29,6 +29,12 @@ export interface IAuditLogAutobanTemplatePayload extends IAuditLogBaseTemplatePa
   userFullname: string;
 }
 
+export interface IAuditLogVotebanTemplatePayload extends IAuditLogBaseTemplatePayload {
+  userId: number;
+  userFullname: string;
+  adminList: string;
+}
+
 export default {
   [AuditLogEventType.BanRussian]: (payload: IAuditLogBanTemplatePayload) =>
     `🐷🇷🇺 Забанено свинособаку.\n\nАккаунт: ${makeRawUserIdLink(
@@ -72,5 +78,13 @@ export default {
       payload.banReason
     }\` від ${moment(payload.banDate).format("DD.MM.YYYY HH:mm")}`,
   [AuditLogEventType.RaidBan]: (payload: IAuditLogAutobanTemplatePayload) =>
-    `⚔️ Видано автоматично бан під час рейду.\n\nАккаунт: ${makeRawUserIdLink(payload.userFullname, payload.userId)}\nЧат: ${payload.chatLink}`,
+    `⚔️ Видано автоматично бан під час рейду.\n\nАккаунт: ${makeRawUserIdLink(
+      payload.userFullname,
+      payload.userId
+    )}\nЧат: ${payload.chatLink}`,
+  [AuditLogEventType.Votebanned]: (payload: IAuditLogVotebanTemplatePayload) =>
+    `🏹 Видано тимчасовий бан за голосуванням.\nАккаунт: ${makeRawUserIdLink(
+      payload.userFullname,
+      payload.userId
+    )}\nЧат: ${payload.chatLink}\nПовідомлення адмінам: ${payload.adminList}`,
 };
