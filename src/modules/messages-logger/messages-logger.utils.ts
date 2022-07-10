@@ -61,13 +61,13 @@ export async function deleteMessageInTelegramAndDb(
   messageId: number
 ) {
   try {
-    await ctx.telegram.deleteMessage(chatId, messageId);
-
     await messagesLoggerRepository.setMessageDeletionDateByChatId(
       chatId,
       messageId,
       new Date()
     );
+
+    await ctx.telegram.deleteMessage(chatId, messageId);
   } catch (err) {
     logger.error(
       `MessagesLogger`,
