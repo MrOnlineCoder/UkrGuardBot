@@ -13,8 +13,10 @@ import { Message } from "telegraf/typings/telegram-types";
 import logger from "../../common/logger";
 import messagesLoggerRepository from "../messages-logger/messages-logger.repository";
 import { extractSenderMetadata } from "../messages-logger/messages-logger.utils";
-import { TelegramSenderType } from "../messages-logger/messages-logger.interfaces";
+import { IBaseContextState, TelegramSenderType } from "../messages-logger/messages-logger.interfaces";
 import banHammerService from "./ban-hammer.service";
+import auditLogService from "../audit-log/audit-log.service";
+import { AuditLogEventType } from "../audit-log/audit-log.types";
 
 async function banHammerGeneralMiddleware(ctx: Context, next: Function) {
   if (ctx.chat?.type == "private") return null;
@@ -75,6 +77,16 @@ async function banHammerWatcher(ctx: Context, next: Function) {
     );
     if (ctx.message) await ctx.deleteMessage();
     await banChatMember(ctx, ctx.chat?.id!, ban.telegramUserId, true);
+    await auditLogService.writeLog(
+      ctx.chat!,
+      AuditLogEventType.AutoBan,
+      {
+        banReason: BanReason.RUSSIAN_ORC,
+        banDate: ban.banDate,
+        userId: ban.telegramUserId,
+        userFullname: (ctx.state as IBaseContextState).dbMessage.senderName
+      }
+    ); 
   }
 
   //Spam ban

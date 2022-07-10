@@ -22,9 +22,11 @@ export interface IAuditLogAntiraidToggleTemplatePayload
     adminFullname: string;
   }
 
-export interface IAuditLogAutobanTemplatePayload extends IAuditLogBanTemplatePayload {
+export interface IAuditLogAutobanTemplatePayload extends IAuditLogBaseTemplatePayload {
   banReason: BanReason;
   banDate: Date;
+  userId: number;
+  userFullname: string;
 }
 
 export default {
@@ -62,10 +64,8 @@ export default {
       payload.adminFullname,
       payload.adminId
     )}\n#antiraid`,
-  [AuditLogEventType.AutoBan]: (payload: IAuditLogAutobanTemplatePayload) => `
-      🛡 Видано автоматичний бан.\n\nАккаунт: ${makeRawUserIdLink(
+  [AuditLogEventType.AutoBan]: (payload: IAuditLogAutobanTemplatePayload) => `🛡 Видано автоматичний бан.\n\nАккаунт: ${makeRawUserIdLink(
         payload.userFullname,
         payload.userId
-      )}\nЧат: ${payload.chatLink}\nПричина: ${payload.banReason} від ${moment(payload.banDate).format('DD.MM.YYY HH:mm')}\n#bans
-  `,
+      )}\nЧат: ${payload.chatLink}\nПричина: \`${payload.banReason}\` від ${moment(payload.banDate).format('DD.MM.YYYY HH:mm')}`,
 };
