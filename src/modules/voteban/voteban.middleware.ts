@@ -71,9 +71,7 @@ async function votebanMiddleware(ctx: Context, next: Function) {
       `🗳 ${makeRawUserIdLink(
         state.dbMessage.senderName!,
         state.dbMessage.telegramSenderId!
-      )} проголосував за бан ${targetLink}, набрано ${votesCount} / ${
-        votebanService.NEEDED_VOTES
-      } голосів.`,
+      )} проголосував за бан ${targetLink}, набрано ${votesCount} / ${requiredVotesCount} голосів.`,
       {
         parse_mode: "Markdown",
       }
