@@ -53,7 +53,8 @@ async function rusBanMiddleware(ctx: Context, next: Function) {
 }
 
 async function spamBanMiddleware(ctx: Context, next: Function) {
-  await banHammerService.issueBan(ctx, BanReason.SPAM);
+  const [_cmdName, arg] = ctx.message?.text.split(' ')!;
+  await banHammerService.issueBan(ctx, BanReason.SPAM, true, false, arg !== '-');
 }
 
 async function banHammerWatcher(ctx: Context, next: Function) {

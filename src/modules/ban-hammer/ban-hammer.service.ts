@@ -71,7 +71,7 @@ async function banBySenderMetadata(ctx: Context, metadata: IMessageSenderMetadat
    }
 }
 
-async function issueBan(ctx: Context, reason: BanReason, isGlobal = true, silent = false) {
+async function issueBan(ctx: Context, reason: BanReason, isGlobal = true, silent = false, persistText = true) {
   const { targetSenderMetadata, targetMessage, dbMessage } =
     ctx.state as IBanHammerMiddlewareState;
 
@@ -90,7 +90,7 @@ async function issueBan(ctx: Context, reason: BanReason, isGlobal = true, silent
     telegramMessageId: targetMessage.message_id,
     telegramUserId: targetSenderMetadata.telegramSenderId!,
     telegramSenderType: dbMessage.telegramSenderType,
-    originMessageContent: targetMessage.text || null,
+    originMessageContent: persistText ? targetMessage.text || null : null,
     banDate: new Date(),
     reason: reason,
   };
