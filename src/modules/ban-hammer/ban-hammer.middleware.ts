@@ -1,6 +1,6 @@
 import { Context } from "telegraf";
 import { banChatMember } from "../../telegram/ban-chat-member.extension";
-import { isChatAdmin } from "../../telegram/utils";
+import { isChatAdmin, makeRawUserIdLink } from "../../telegram/utils";
 
 import BanHammerRepository from "./ban-hammer.repository";
 
@@ -91,30 +91,44 @@ async function banHammerWatcher(ctx: Context, next: Function) {
   }
 
   //Spam ban
-  // if (ctx.message?.text) {
-  //   const spamBans = await BanHammerRepository.findSpamBansByContent(
-  //     ctx.message.text
-  //   );
+  if (ctx.message?.text) {
+    const spamBans = await BanHammerRepository.findSpamBansByContent(
+      ctx.message.text
+    );
 
-  //   if (spamBans.length) {
-  //     const ban = spamBans[0];
-  //     logger.log(
-  //       `BanHammerWatcher`,
-  //       `User ${ctx.from.first_name} (${
-  //         ctx.from.id
-  //       }) tried to send a SPAM message in chat ${ctx.chat
-  //         ?.id!}, matched by global ban ID ${ban.id} since ${ban.banDate.toISOString()}. Banning in chat...`
-  //     );
-  //     await ctx.deleteMessage();
-  //     await banChatMember(ctx, ctx.chat?.id!, ctx.from.id);
+    if (spamBans.length) {
+      const ban = spamBans[0];
+      logger.log(
+        `BanHammerWatcher`,
+        `User ${ctx.from.first_name} (${
+          ctx.from.id
+        }) tried to send a SPAM message in chat ${ctx.chat
+          ?.id!}, matched by global ban ID ${ban.id} since ${ban.banDate.toISOString()}. Banning in chat...`
+      );
+       if (ctx.message)
+         await deleteMessageInTelegramAndDb(
+           ctx,
+           ctx.chat?.id!,
+           ctx.message?.message_id!
+         );
+      await banChatMember(ctx, ctx.chat?.id!, ctx.from.id);
 
-  //     const ack = await ctx.reply(`🛡 Користувач ${ctx.from.first_name} (${ctx.from.id}) намагався відправити спам-повідомлення, і тому був забанений.`);
+      const state = ctx.state as IBaseContextState;
 
-  //     setTimeout(async () => {
-  //       await ctx.deleteMessage(ack.message_id);
-  //     }, 4500);
-  //   }
-  // }
+      const ack = await ctx.reply(`🛡 Користувач ${makeRawUserIdLink(state.dbMessage.senderName || state.dbMessage.senderUsername || '?', state.dbMessage.telegramSenderId!)} намагався відправити спам-повідомлення, і тому був забанений.`);
+
+      await auditLogService.writeLog(ctx.chat!, AuditLogEventType.AutoBan, {
+        banReason: BanReason.SPAM,
+        banDate: ban.banDate,
+        userId: ban.telegramUserId,
+        userFullname: (ctx.state as IBaseContextState).dbMessage.senderName,
+      }); 
+
+      setTimeout(async () => {
+        await ctx.deleteMessage(ack.message_id);
+      }, 5500);
+    }
+  }
 
   next();
 }
