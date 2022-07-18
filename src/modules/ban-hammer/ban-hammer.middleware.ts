@@ -62,6 +62,10 @@ async function banHammerWatcher(ctx: Context, next: Function) {
 
   if (!ctx.from) return next();
 
+  const isAdmin = await isChatAdmin(ctx);
+
+  if (isAdmin) return next();
+
   //Typical ban
   const bans = await BanHammerRepository.findBansByUserId(ctx.from?.id!, true);
 
