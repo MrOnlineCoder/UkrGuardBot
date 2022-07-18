@@ -8,7 +8,13 @@ export function install(bot: MyBot) {
       BanHammerMiddleware.banHammerGeneralMiddleware,
     BanHammerMiddleware.rusBanMiddleware
     );
-    bot.hears('!спам', BanHammerMiddleware.banHammerGeneralMiddleware, BanHammerMiddleware.spamBanMiddleware)
+    bot.hears(/!спам.*/, BanHammerMiddleware.banHammerGeneralMiddleware, BanHammerMiddleware.spamBanMiddleware)
+
+    bot.hears(
+      /!spam.*/,
+      BanHammerMiddleware.banHammerGeneralMiddleware,
+      BanHammerMiddleware.spamBanMiddleware
+    );
 
     bot.use(BanHammerMiddleware.banHammerWatcher);
 }
