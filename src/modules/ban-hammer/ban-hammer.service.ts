@@ -2,11 +2,17 @@ import { Context } from "telegraf";
 import { Sticker } from "telegraf/typings/telegram-types";
 import logger from "../../common/logger";
 import { getRedisClient } from "../../common/redis";
-import { banChatMember, banChatSenderChat } from "../../telegram/ban-chat-member.extension";
-import { makeRawUserIdLink } from "../../telegram/utils";
+import {
+  banChatMember,
+  banChatSenderChat,
+} from "../../telegram/ban-chat-member.extension";
+import { extractTextFromMessage, makeRawUserIdLink } from "../../telegram/utils";
 import auditLogService from "../audit-log/audit-log.service";
 import { AuditLogEventType } from "../audit-log/audit-log.types";
-import { IMessageSenderMetadata, TelegramSenderType } from "../messages-logger/messages-logger.interfaces";
+import {
+  IMessageSenderMetadata,
+  TelegramSenderType,
+} from "../messages-logger/messages-logger.interfaces";
 import messagesLoggerRepository from "../messages-logger/messages-logger.repository";
 import { deleteMessageInTelegramAndDb } from "../messages-logger/messages-logger.utils";
 import {
@@ -63,25 +69,36 @@ async function issueInOtherChats(ctx: Context, ban: IBan) {
   }
 }
 
-async function banBySenderMetadata(ctx: Context, metadata: IMessageSenderMetadata) {
-   if (metadata.telegramSenderType === TelegramSenderType.USER) {
-     await banChatMember(ctx, ctx.chat?.id!, metadata.telegramSenderId!, true);
-   } else {
-     await banChatSenderChat(ctx, ctx.chat?.id!, metadata.telegramSenderId!);
-   }
+async function banBySenderMetadata(
+  ctx: Context,
+  metadata: IMessageSenderMetadata
+) {
+  if (metadata.telegramSenderType === TelegramSenderType.USER) {
+    await banChatMember(ctx, ctx.chat?.id!, metadata.telegramSenderId!, true);
+  } else {
+    await banChatSenderChat(ctx, ctx.chat?.id!, metadata.telegramSenderId!);
+  }
 }
 
-async function issueBan(ctx: Context, reason: BanReason, isGlobal = true, silent = false, persistText = true) {
+async function issueBan(
+  ctx: Context,
+  reason: BanReason,
+  isGlobal = true,
+  silent = false,
+  persistText = true
+) {
   const { targetSenderMetadata, targetMessage, dbMessage } =
     ctx.state as IBanHammerMiddlewareState;
 
   await banBySenderMetadata(ctx, targetSenderMetadata);
-    
+
   await deleteMessageInTelegramAndDb(
     ctx,
     ctx.chat?.id!,
     ctx.message?.message_id!
   );
+
+  const messageTextContent = extractTextFromMessage(targetMessage);
 
   const ban: IBan = {
     isGlobal,
@@ -90,7 +107,7 @@ async function issueBan(ctx: Context, reason: BanReason, isGlobal = true, silent
     telegramMessageId: targetMessage.message_id,
     telegramUserId: targetSenderMetadata.telegramSenderId!,
     telegramSenderType: dbMessage.telegramSenderType,
-    originMessageContent: persistText ? targetMessage.text || null : null,
+    originMessageContent: persistText ? messageTextContent : null,
     banDate: new Date(),
     reason: reason,
   };
@@ -108,23 +125,26 @@ async function issueBan(ctx: Context, reason: BanReason, isGlobal = true, silent
       targetSenderMetadata.senderName!,
       targetSenderMetadata.telegramSenderId!
     )} забанено. Вартовий бот тепер не допустить ні його, ні його спам розсилку в інші чати під охороною`,
-    [BanReason.UNKNOWN]: `Видано якось бан ${targetSenderMetadata.senderName} (${targetSenderMetadata.telegramSenderId})`
+    [BanReason.UNKNOWN]: `Видано якось бан ${targetSenderMetadata.senderName} (${targetSenderMetadata.telegramSenderId})`,
   };
 
   await auditLogService.forwardMessageToLog(
-      ctx.chat?.id!,
-      targetMessage.message_id
+    ctx.chat?.id!,
+    targetMessage.message_id
   );
 
   await auditLogService.writeLog(
-      ctx.chat!,
-      reason === BanReason.RUSSIAN_ORC ? AuditLogEventType.BanRussian : AuditLogEventType.BanSpam,
-      {
-          adminId: ban.telegramAdminId,
-          adminFullname: dbMessage.senderName,
-          userId: ban.telegramUserId,
-          userFullname: targetSenderMetadata.senderName
-      }
+    ctx.chat!,
+    reason === BanReason.RUSSIAN_ORC
+      ? AuditLogEventType.BanRussian
+      : AuditLogEventType.BanSpam,
+    {
+      adminId: ban.telegramAdminId,
+      adminFullname: dbMessage.senderName,
+      userId: ban.telegramUserId,
+      userFullname: targetSenderMetadata.senderName,
+      blacklisted: persistText,
+    }
   );
 
   if (targetMessage.sticker) {
@@ -132,7 +152,7 @@ async function issueBan(ctx: Context, reason: BanReason, isGlobal = true, silent
   }
 
   const ack = await ctx.reply(ackMessages[reason], {
-      parse_mode: 'Markdown'
+    parse_mode: "Markdown",
   });
 
   await issueInOtherChats(ctx, ban);
@@ -143,12 +163,16 @@ async function issueBan(ctx: Context, reason: BanReason, isGlobal = true, silent
 }
 
 async function banStickerOrSet(sticker: Sticker) {
-  if (sticker.set_name) await getRedisClient().sadd(`banned_stickersets`, sticker.set_name);
+  if (sticker.set_name)
+    await getRedisClient().sadd(`banned_stickersets`, sticker.set_name);
   await getRedisClient().sadd(`banned_stickers`, sticker.file_unique_id);
 }
 
 async function isStickerBanned(sticker: Sticker) {
-  const isStickerBanned = await getRedisClient().sismember(`banned_stickersets`, sticker.set_name || 'n/a');
+  const isStickerBanned = await getRedisClient().sismember(
+    `banned_stickersets`,
+    sticker.set_name || "n/a"
+  );
   const isSetBanned = await getRedisClient().sismember(
     `banned_stickers`,
     sticker.file_unique_id
@@ -161,5 +185,5 @@ export default {
   issueBan,
   isStickerBanned,
   banStickerOrSet,
-  banBySenderMetadata
+  banBySenderMetadata,
 };

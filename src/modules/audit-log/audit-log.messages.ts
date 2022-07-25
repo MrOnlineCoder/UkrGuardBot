@@ -14,6 +14,7 @@ export interface IAuditLogBanTemplatePayload
   userFullname: string;
   adminId: number;
   adminFullname: string;
+  blacklisted: boolean;
 }
 
 export interface IAuditLogAntiraidToggleTemplatePayload
@@ -45,7 +46,7 @@ export default {
       payload.adminId
     )}\n#bans #rusbot`,
   [AuditLogEventType.BanSpam]: (payload: IAuditLogBanTemplatePayload) =>
-    `🙊 Забанено спамера.\n\nАккаунт: ${makeRawUserIdLink(
+    `🙊 Забанено спамера (${payload.blacklisted ? 'текст додано в чорний список' : 'бан без додавання тексту в чорний список'}).\n\nАккаунт: ${makeRawUserIdLink(
       `${payload.userFullname} #${payload.userId}`,
       payload.userId
     )}\nЧат: ${payload.chatLink}\nАдмін: ${makeRawUserIdLink(

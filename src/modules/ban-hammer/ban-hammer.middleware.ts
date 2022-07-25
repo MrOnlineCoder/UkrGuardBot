@@ -12,8 +12,14 @@ import {
 import { Message } from "telegraf/typings/telegram-types";
 import logger from "../../common/logger";
 import messagesLoggerRepository from "../messages-logger/messages-logger.repository";
-import { deleteMessageInTelegramAndDb, extractSenderMetadata } from "../messages-logger/messages-logger.utils";
-import { IBaseContextState, TelegramSenderType } from "../messages-logger/messages-logger.interfaces";
+import {
+  deleteMessageInTelegramAndDb,
+  extractSenderMetadata,
+} from "../messages-logger/messages-logger.utils";
+import {
+  IBaseContextState,
+  TelegramSenderType,
+} from "../messages-logger/messages-logger.interfaces";
 import banHammerService from "./ban-hammer.service";
 import auditLogService from "../audit-log/audit-log.service";
 import { AuditLogEventType } from "../audit-log/audit-log.types";
@@ -53,8 +59,14 @@ async function rusBanMiddleware(ctx: Context, next: Function) {
 }
 
 async function spamBanMiddleware(ctx: Context, next: Function) {
-  const [_cmdName, arg] = ctx.message?.text.split(' ')!;
-  await banHammerService.issueBan(ctx, BanReason.SPAM, true, false, arg !== '-');
+  const [_cmdName, arg] = ctx.message?.text.split(" ")!;
+  await banHammerService.issueBan(
+    ctx,
+    BanReason.SPAM,
+    true,
+    false,
+    arg !== "-"
+  );
 }
 
 async function banHammerWatcher(ctx: Context, next: Function) {
@@ -80,18 +92,19 @@ async function banHammerWatcher(ctx: Context, next: Function) {
         ban.reason
       } since ${ban.banDate.toISOString()}. Banning in chat...`
     );
-    if (ctx.message) await deleteMessageInTelegramAndDb(ctx, ctx.chat?.id!, ctx.message?.message_id!);
+    if (ctx.message)
+      await deleteMessageInTelegramAndDb(
+        ctx,
+        ctx.chat?.id!,
+        ctx.message?.message_id!
+      );
     await banChatMember(ctx, ctx.chat?.id!, ban.telegramUserId, true);
-    await auditLogService.writeLog(
-      ctx.chat!,
-      AuditLogEventType.AutoBan,
-      {
-        banReason: BanReason.RUSSIAN_ORC,
-        banDate: ban.banDate,
-        userId: ban.telegramUserId,
-        userFullname: (ctx.state as IBaseContextState).dbMessage.senderName
-      }
-    ); 
+    await auditLogService.writeLog(ctx.chat!, AuditLogEventType.AutoBan, {
+      banReason: BanReason.RUSSIAN_ORC,
+      banDate: ban.banDate,
+      userId: ban.telegramUserId,
+      userFullname: (ctx.state as IBaseContextState).dbMessage.senderName,
+    });
   }
 
   //Spam ban
@@ -107,26 +120,41 @@ async function banHammerWatcher(ctx: Context, next: Function) {
         `User ${ctx.from.first_name} (${
           ctx.from.id
         }) tried to send a SPAM message in chat ${ctx.chat
-          ?.id!}, matched by global ban ID ${ban.id} since ${ban.banDate.toISOString()}. Banning in chat...`
+          ?.id!}, matched by global ban ID ${
+          ban.id
+        } since ${ban.banDate.toISOString()}. Banning in chat...`
       );
-       if (ctx.message)
-         await deleteMessageInTelegramAndDb(
-           ctx,
-           ctx.chat?.id!,
-           ctx.message?.message_id!
-         );
-      await banChatMember(ctx, ctx.chat?.id!, ctx.from.id);
 
-      const state = ctx.state as IBaseContextState;
-
-      const ack = await ctx.reply(`🛡 Користувач ${makeRawUserIdLink(state.dbMessage.senderName || state.dbMessage.senderUsername || '?', state.dbMessage.telegramSenderId!)} намагався відправити спам-повідомлення, і тому був забанений.`);
-
+      await auditLogService.forwardMessageToLog(
+        ctx.chat?.id!,
+        ctx.message.message_id
+      );
       await auditLogService.writeLog(ctx.chat!, AuditLogEventType.AutoBan, {
         banReason: BanReason.SPAM,
         banDate: ban.banDate,
         userId: ban.telegramUserId,
         userFullname: (ctx.state as IBaseContextState).dbMessage.senderName,
-      }); 
+      });
+
+      if (ctx.message)
+        await deleteMessageInTelegramAndDb(
+          ctx,
+          ctx.chat?.id!,
+          ctx.message?.message_id!
+        );
+      await banChatMember(ctx, ctx.chat?.id!, ctx.from.id);
+
+      const state = ctx.state as IBaseContextState;
+
+      const ack = await ctx.reply(
+        `🛡 Користувач ${makeRawUserIdLink(
+          state.dbMessage.senderName || state.dbMessage.senderUsername || "?",
+          state.dbMessage.telegramSenderId!
+        )} намагався відправити спам-повідомлення, і тому був забанений.`,
+        {
+          parse_mode: "Markdown",
+        }
+      );
 
       setTimeout(async () => {
         await ctx.deleteMessage(ack.message_id);
