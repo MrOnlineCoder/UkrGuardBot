@@ -16,6 +16,11 @@ function mapRowToBan(row: any): IBan {
   };
 }
 
+export type IBanCountsByType = {
+  reason: BanReason;
+  count: number;
+};
+
 export default {
   mapRowToBan,
   insertBan: async (ban: IBan) => {
@@ -40,7 +45,7 @@ export default {
   },
   findBansByUserId: async (
     userId: number,
-    isGlobal = true,
+    isGlobal = true
   ): Promise<IBan[]> => {
     const { rows } = await getDbClient().query(
       `
@@ -60,5 +65,12 @@ export default {
     );
 
     return rows.map(mapRowToBan);
+  },
+  countBanTypes: async (): Promise<IBanCountsByType[]> => {
+    const { rows } = await getDbClient().query(
+      `SELECT reason, count(*) FROM bans GROUP BY reason`
+    )
+
+    return rows;
   },
 };

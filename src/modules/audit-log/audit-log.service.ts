@@ -14,20 +14,25 @@ function setBot(_bot: MyBot) {
     bot = _bot;
 }
 
-async function writeLog(chat: Chat, eventType: AuditLogEventType, payload: any) {
+async function writeLog(chat: Chat | null, eventType: AuditLogEventType, payload: any) {
     if (!LOG_CHAT_ID) return;
 
-    const possibleChatTitle: string = (chat as any).title;
+    let chatTitle = 'n/a';
+    let chatLink = '';
 
-    const chatLink = makeChatLink(possibleChatTitle || chat.id.toString());
+    if (chat) {
+         chatTitle = (chat as any).title;
+         chatLink = makeChatLink(chatTitle || chat.id.toString());
+    }
 
+   
     const messageTemplate = AuditlogMessages[eventType];
 
     const templatePayload: IAuditLogBaseTemplatePayload = {
-        chatLink,
-        chatTitle: possibleChatTitle,
-        ...payload
-    }
+      chatLink,
+      chatTitle,
+      ...payload,
+    };
 
     const builtMessage = messageTemplate(templatePayload as any);
 
@@ -41,7 +46,7 @@ async function writeLog(chat: Chat, eventType: AuditLogEventType, payload: any) 
 
     logger.log(
       `AuditLogService`,
-      `Sent log event ${eventType}, happened in chat ${possibleChatTitle} (${chat.id}), message_id = ${tgMessage.message_id}`
+      `Sent log event ${eventType}, happened in chat ${chatTitle} (${chat?.id || 'n/a'}), message_id = ${tgMessage.message_id}`
     );
 
 }

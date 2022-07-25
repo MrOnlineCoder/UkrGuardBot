@@ -36,6 +36,12 @@ export interface IAuditLogVotebanTemplatePayload extends IAuditLogBaseTemplatePa
   adminList: string;
 }
 
+export interface IAuditLogDailyTemplatePayload extends IAuditLogBaseTemplatePayload {
+  rusBans: number;
+  spamBans: number;
+  warDays: number;
+}
+
 export default {
   [AuditLogEventType.BanRussian]: (payload: IAuditLogBanTemplatePayload) =>
     `🐷🇷🇺 Забанено свинособаку.\n\nАккаунт: ${makeRawUserIdLink(
@@ -46,7 +52,11 @@ export default {
       payload.adminId
     )}\n#bans #rusbot`,
   [AuditLogEventType.BanSpam]: (payload: IAuditLogBanTemplatePayload) =>
-    `🙊 Забанено спамера (${payload.blacklisted ? 'текст додано в чорний список' : 'бан без додавання тексту в чорний список'}).\n\nАккаунт: ${makeRawUserIdLink(
+    `🙊 Забанено спамера (${
+      payload.blacklisted
+        ? "текст додано в чорний список"
+        : "бан без додавання тексту в чорний список"
+    }).\n\nАккаунт: ${makeRawUserIdLink(
       `${payload.userFullname} #${payload.userId}`,
       payload.userId
     )}\nЧат: ${payload.chatLink}\nАдмін: ${makeRawUserIdLink(
@@ -88,4 +98,6 @@ export default {
       `${payload.userFullname} #${payload.userId}`,
       payload.userId
     )}\nЧат: ${payload.chatLink}\nПовідомлення адмінам: ${payload.adminList}`,
+  [AuditLogEventType.DailyCounter]: (payload: IAuditLogDailyTemplatePayload) =>
+    `🗓 День ${payload.warDays}.\n\nПоки Збройні сили України захищають наші життя і нашу землю на полі бою, вартовий бот оберігає чати від ${payload.rusBans} руснявих аккаунтів та ${payload.spamBans} спамерів та спам повідомлень.\n\n🇺🇦 Слава Україні, слава нації і пиздець російській федерації \nРазом переможемо!🇺🇦`,
 };
