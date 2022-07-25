@@ -10,7 +10,7 @@ async function sendDailyMessage() {
     const results = await banHammerRepository.countBanTypes();
 
     const rusBans = results.find(r => r.reason == BanReason.RUSSIAN_ORC)?.count ?? 0;
-    const spamBans = results.find((r) => r.reason == BanReason.RUSSIAN_ORC)?.count ?? 0;
+    const spamBans = results.find((r) => r.reason == BanReason.SPAM)?.count ?? 0;
 
     const diffMs = Date.now() - END_OF_RUSSIA_DATE_START.valueOf();
 
