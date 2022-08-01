@@ -63,6 +63,14 @@ export default {
       payload.adminFullname,
       payload.adminId
     )}\n#bans #spam`,
+  [AuditLogEventType.BanTreasonLover]: (payload: IAuditLogBanTemplatePayload) =>
+    `🍫 Забанено зрадойоба.\n\nАккаунт: ${makeRawUserIdLink(
+      `${payload.userFullname} #${payload.userId}`,
+      payload.userId
+    )}\nЧат: ${payload.chatLink}\nАдмін: ${makeRawUserIdLink(
+      payload.adminFullname,
+      payload.adminId
+    )}\n#bans #zradoeb`,
   [AuditLogEventType.EnableAntiraid]: (
     payload: IAuditLogAntiraidToggleTemplatePayload
   ) =>

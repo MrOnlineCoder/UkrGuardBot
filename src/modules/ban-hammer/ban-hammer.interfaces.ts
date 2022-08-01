@@ -17,7 +17,8 @@ export interface IBan {
 export enum BanReason {
     UNKNOWN = 'UNKNOWN',
     RUSSIAN_ORC = 'RUSSIAN_ORC',
-    SPAM = 'SPAM'
+    SPAM = 'SPAM',
+    TREASON_LOVER = 'TREASON_LOVER'
 }
 
 export interface IBanHammerMiddlewareState extends IBaseContextState {

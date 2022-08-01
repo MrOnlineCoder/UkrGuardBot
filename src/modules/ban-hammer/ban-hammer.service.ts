@@ -22,7 +22,11 @@ import {
 } from "./ban-hammer.interfaces";
 import banHammerRepository from "./ban-hammer.repository";
 
+const TREASON_LOVER_BAN_DURATION = 7 * 24 * 60 * 60; //1 week
+
 async function issueInOtherChats(ctx: Context, ban: IBan) {
+  if (!ban.isGlobal) return;
+  
   const messages = await messagesLoggerRepository.findLastMessagesOfUser(
     ban.telegramUserId,
     24 * 60 * 60 * 1000 // 24 hours
@@ -71,10 +75,17 @@ async function issueInOtherChats(ctx: Context, ban: IBan) {
 
 async function banBySenderMetadata(
   ctx: Context,
-  metadata: IMessageSenderMetadata
+  metadata: IMessageSenderMetadata,
+  banUntil: number = 0
 ) {
   if (metadata.telegramSenderType === TelegramSenderType.USER) {
-    await banChatMember(ctx, ctx.chat?.id!, metadata.telegramSenderId!, true);
+    await banChatMember(
+      ctx,
+      ctx.chat?.id!,
+      metadata.telegramSenderId!,
+      true,
+      banUntil
+    );
   } else {
     await banChatSenderChat(ctx, ctx.chat?.id!, metadata.telegramSenderId!);
   }
@@ -90,7 +101,13 @@ async function issueBan(
   const { targetSenderMetadata, targetMessage, dbMessage } =
     ctx.state as IBanHammerMiddlewareState;
 
-  await banBySenderMetadata(ctx, targetSenderMetadata);
+  const possibleTreasonBanEndDate = Math.round(Date.now() / 1000 + TREASON_LOVER_BAN_DURATION);
+
+  await banBySenderMetadata(
+    ctx,
+    targetSenderMetadata,
+    reason === BanReason.TREASON_LOVER ? possibleTreasonBanEndDate : 0
+  );
 
   await deleteMessageInTelegramAndDb(
     ctx,
@@ -114,18 +131,23 @@ async function issueBan(
 
   await banHammerRepository.insertBan(ban);
 
-  const ackMessages = {
-    [BanReason.RUSSIAN_ORC]: `🇷🇺🖕 Русню ${makeRawUserIdLink(
+  const targetUserIdLink = makeRawUserIdLink(
       targetSenderMetadata.senderName!,
       ban.telegramUserId
-    )} (ID ${
-      targetSenderMetadata.telegramSenderId
-    }) забанено. Вартовий бот тепер не допустить його в жоден інший чат під охороною.`,
-    [BanReason.SPAM]: `🙊 Спамера ${makeRawUserIdLink(
-      targetSenderMetadata.senderName!,
-      targetSenderMetadata.telegramSenderId!
-    )} забанено. Вартовий бот тепер не допустить ні його, ні його спам розсилку в інші чати під охороною`,
+    );
+
+  const ackMessages = {
+    [BanReason.RUSSIAN_ORC]: `🇷🇺🖕 Русню ${targetUserIdLink} (ID ${targetSenderMetadata.telegramSenderId}) забанено. Вартовий бот тепер не допустить його в жоден інший чат під охороною.`,
+    [BanReason.SPAM]: `🙊 Спамера ${targetUserIdLink} забанено. Вартовий бот тепер не допустить ні його, ні його спам розсилку в інші чати під охороною`,
     [BanReason.UNKNOWN]: `Видано якось бан ${targetSenderMetadata.senderName} (${targetSenderMetadata.telegramSenderId})`,
+    [BanReason.TREASON_LOVER]: `🍫 Зрадофіла ${targetUserIdLink} (ID ${targetSenderMetadata.telegramSenderId}) забанено. Тепер його панічні настрої будуть росповсюджені в рази менше`,
+  };
+
+  const auditLogMapping = {
+    [BanReason.RUSSIAN_ORC]: AuditLogEventType.BanRussian,
+    [BanReason.SPAM]: AuditLogEventType.BanSpam,
+    [BanReason.TREASON_LOVER]: AuditLogEventType.BanTreasonLover,
+    [BanReason.UNKNOWN]: AuditLogEventType.BanRussian
   };
 
   await auditLogService.forwardMessageToLog(
@@ -135,9 +157,7 @@ async function issueBan(
 
   await auditLogService.writeLog(
     ctx.chat!,
-    reason === BanReason.RUSSIAN_ORC
-      ? AuditLogEventType.BanRussian
-      : AuditLogEventType.BanSpam,
+    auditLogMapping[ban.reason],
     {
       adminId: ban.telegramAdminId,
       adminFullname: dbMessage.senderName,
@@ -159,7 +179,7 @@ async function issueBan(
 
   setTimeout(async () => {
     await ctx.telegram.deleteMessage(ack.chat.id, ack.message_id);
-  }, 5500);
+  }, 6500);
 }
 
 async function banStickerOrSet(sticker: Sticker) {

@@ -1,6 +1,6 @@
 import { Context } from "telegraf";
 import { banChatMember } from "../../telegram/ban-chat-member.extension";
-import { isChatAdmin, makeRawUserIdLink } from "../../telegram/utils";
+import { extractTextFromMessage, isChatAdmin, makeRawUserIdLink } from "../../telegram/utils";
 
 import BanHammerRepository from "./ban-hammer.repository";
 
@@ -69,6 +69,16 @@ async function spamBanMiddleware(ctx: Context, next: Function) {
   );
 }
 
+async function treasonLoverBanMiddleware(ctx: Context, next: Function) {
+  await banHammerService.issueBan(
+    ctx,
+    BanReason.TREASON_LOVER,
+    false,
+    false,
+    true
+  );
+}
+
 async function banHammerWatcher(ctx: Context, next: Function) {
   if (ctx.chat?.type == "private") return next();
 
@@ -108,10 +118,10 @@ async function banHammerWatcher(ctx: Context, next: Function) {
   }
 
   //Spam ban
-  if (ctx.message?.text) {
-    const spamBans = await BanHammerRepository.findSpamBansByContent(
-      ctx.message.text
-    );
+  const msgText = extractTextFromMessage(ctx.message!);
+
+  if (msgText) {
+    const spamBans = await BanHammerRepository.findSpamBansByContent(msgText);
 
     if (spamBans.length) {
       const ban = spamBans[0];
@@ -127,7 +137,7 @@ async function banHammerWatcher(ctx: Context, next: Function) {
 
       await auditLogService.forwardMessageToLog(
         ctx.chat?.id!,
-        ctx.message.message_id
+        ctx.message!.message_id
       );
       await auditLogService.writeLog(ctx.chat!, AuditLogEventType.AutoBan, {
         banReason: BanReason.SPAM,
@@ -168,6 +178,7 @@ async function banHammerWatcher(ctx: Context, next: Function) {
 export default {
   rusBanMiddleware,
   spamBanMiddleware,
+  treasonLoverBanMiddleware,
   banHammerGeneralMiddleware,
   banHammerWatcher,
 };

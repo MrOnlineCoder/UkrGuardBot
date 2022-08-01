@@ -1,10 +1,11 @@
 import { Context } from "telegraf"
 
-export async function banChatMember(ctx: Context, chatId: number, userId: number, revokeMessages = true) {
+export async function banChatMember(ctx: Context, chatId: number, userId: number, revokeMessages = true, banUntil = 0) {
     await ctx.telegram.callApi("banChatMember", {
       chat_id: chatId,
       user_id: userId,
       revoke_messages: revokeMessages,
+      until_date: banUntil,
     });
 }
 

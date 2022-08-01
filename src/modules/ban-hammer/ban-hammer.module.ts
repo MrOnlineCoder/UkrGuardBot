@@ -16,6 +16,18 @@ export function install(bot: MyBot) {
       BanHammerMiddleware.spamBanMiddleware
     );
 
+    bot.hears(
+      /!treasonlover.*/,
+      BanHammerMiddleware.banHammerGeneralMiddleware,
+      BanHammerMiddleware.treasonLoverBanMiddleware
+    );
+
+    bot.hears(
+      /!зрадойоб.*/,
+      BanHammerMiddleware.banHammerGeneralMiddleware,
+      BanHammerMiddleware.treasonLoverBanMiddleware
+    );
+
     bot.use(BanHammerMiddleware.banHammerWatcher);
 }
 
